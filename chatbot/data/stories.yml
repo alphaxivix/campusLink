@@ -1,0 +1,12 @@
+# data/stories.yml
+version: "3.1"
+
+stories:
+- story: interactive_story_1
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_question
+  - action: action_get_admin_answer
+  - intent: goodbye
+  - action: utter_goodbye
