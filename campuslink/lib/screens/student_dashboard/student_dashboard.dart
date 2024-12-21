@@ -1,43 +1,81 @@
 import 'package:campuslink/screens/admin_dashboard.dart/admin_attendance_report.dart';
+import 'package:campuslink/screens/admin_dashboard.dart/event_detail_screen.dart';
 import 'package:flutter/material.dart';
 import '../profile.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'package:intl/intl.dart';
+
 
 class StudentDashboard extends StatefulWidget {
+  // Stream controller for event updates
+  static final StreamController<void> eventUpdateController = StreamController<void>.broadcast();
+  
   @override
   _StudentDashboardState createState() => _StudentDashboardState();
 }
 
 class _StudentDashboardState extends State<StudentDashboard> {
   String eventTitle = 'Loading...';
-  String eventDate = 'Loading...';
+  String? eventDate;
+  late StreamSubscription eventUpdateSubscription;
+  Map<String, dynamic> upcomingEvent = {};
 
   @override
   void initState() {
     super.initState();
     fetchUpcomingEvent();
+    
+    // Listen to event updates
+    eventUpdateSubscription = StudentDashboard.eventUpdateController.stream.listen((_) {
+      fetchUpcomingEvent();
+    });
   }
 
-  // Method to fetch the upcoming event
+  @override
+  void dispose() {
+    eventUpdateSubscription.cancel();
+    super.dispose();
+  }
+
   Future<void> fetchUpcomingEvent() async {
     try {
       final response = await http.get(Uri.parse('http://192.168.1.78/upcoming_event.php'));
 
       if (response.statusCode == 200) {
+        if (response.body.isEmpty) {
+          setState(() {
+            eventTitle = 'No upcoming events';
+            eventDate = null;
+            upcomingEvent = {};
+          });
+          return;
+        }
+
         final data = jsonDecode(response.body);
         setState(() {
-          eventTitle = data['title'];
+          upcomingEvent = data;
+          eventTitle = data['title'] ?? 'No title';
           eventDate = data['event_date'];
         });
       } else {
-        // Handle error
-        print('Failed to load upcoming event');
+        setState(() {
+          eventTitle = 'Error loading event';
+          eventDate = null;
+          upcomingEvent = {};
+        });
       }
     } catch (e) {
+      setState(() {
+        eventTitle = 'Error loading event';
+        eventDate = null;
+        upcomingEvent = {};
+      });
       print('Error: $e');
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -164,41 +202,89 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.event, color: Colors.white, size: 30),
-                        SizedBox(width: 10),
-                        Text(
-                          'Upcoming Event',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.event, color: Colors.white, size: 30),
+                            SizedBox(width: 10),
+                            Text(
+                              'Upcoming Event',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
+                        // Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
                       ],
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 20),
                     Text(
                       eventTitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      eventDate, // Displaying the date/time fetched
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 16,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, 
+                            color: Colors.white.withOpacity(0.9), 
+                            size: 16),
+                        const SizedBox(width: 8),
+                        // In the Row widget where the date is displayed, replace the Text widget with:
+                        Text(
+                          eventDate == null 
+                              ? 'Loading...'
+                              : DateFormat('MMM dd, yyyy HH:mm').format(DateTime.parse(eventDate!)),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EventDetailScreen(
+                              eventId: upcomingEvent['id']?.toString() ?? '1',
+                              onEventUpdated: () {
+                                // Refresh upcoming event when returning from detail screen
+                                fetchUpcomingEvent();
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.purple,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('View Details'),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, size: 16),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 15),
                   ],
                 ),
               ),
-
 
               // Quick Actions Grid
               Padding(

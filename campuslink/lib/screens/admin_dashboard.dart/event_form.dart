@@ -1,3 +1,4 @@
+import 'package:campuslink/screens/admin_dashboard.dart/admin_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -42,10 +43,13 @@ class _EventFormState extends State<EventForm> {
   }
 
 Future<void> _loadEventData() async {
+  if (!mounted) return; // Add this check at the start
+  
   try {
     final url = Uri.parse('$apiUrl?id=${widget.eventId}');
-    
     final response = await http.get(url);
+    
+    if (!mounted) return; // Add this check after async operations
     
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
@@ -101,9 +105,11 @@ Future<void> _loadEventData() async {
     }
   } catch (e) {
     print('Error loading event: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error loading event: $e')),
-    );
+    if (mounted) { // Add this check before showing SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading event: $e')),
+      );
+    }
   }
 }
 
@@ -132,6 +138,7 @@ Future<void> _loadEventData() async {
             );
 
       if (response.statusCode == 200) {
+        AdminDashboard.eventUpdateController.add(null);
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Event ${widget.eventId == null ? 'created' : 'updated'} successfully')),
