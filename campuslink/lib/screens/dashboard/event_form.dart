@@ -1,4 +1,4 @@
-import 'package:campuslink/screens/admin_dashboard.dart/admin_dashboard.dart';
+import 'package:campuslink/screens/dashboard/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -138,7 +138,7 @@ Future<void> _loadEventData() async {
             );
 
       if (response.statusCode == 200) {
-        AdminDashboard.eventUpdateController.add(null);
+        UserDashboard.eventUpdateController.add(null);
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Event ${widget.eventId == null ? 'created' : 'updated'} successfully')),

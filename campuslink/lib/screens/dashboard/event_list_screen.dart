@@ -1,4 +1,4 @@
-import 'package:campuslink/screens/admin_dashboard.dart/admin_dashboard.dart';
+import 'package:campuslink/screens/dashboard/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -74,7 +74,7 @@ class _EventListScreenState extends State<EventListScreen> {
       final response = await http.delete(Uri.parse('$baseUrl?id=$id'));
       if (response.statusCode == 200) {
         // Notify AdminDashboard about the event update
-        AdminDashboard.eventUpdateController.add(null);
+        UserDashboard.eventUpdateController.add(null);
         
         _loadEvents();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -209,7 +209,7 @@ class _EventListScreenState extends State<EventListScreen> {
           if (result == true) {
             _loadEvents();
             // Notify AdminDashboard about new event
-            AdminDashboard.eventUpdateController.add(null);
+            UserDashboard.eventUpdateController.add(null);
           }
         },
         icon: const Icon(Icons.add),
@@ -291,7 +291,7 @@ class _EventListScreenState extends State<EventListScreen> {
                         if (result == true) {
                           _loadEvents();
                           // Notify AdminDashboard about edited event
-                          AdminDashboard.eventUpdateController.add(null);
+                          UserDashboard.eventUpdateController.add(null);
                         }
                       } else if (value == 'delete') {
                         _deleteEvent(event['id'].toString());

@@ -1,22 +1,34 @@
-import 'package:campuslink/screens/admin_dashboard.dart/admin_attendance_report.dart';
-import 'package:campuslink/screens/admin_dashboard.dart/event_detail_screen.dart';
+import 'package:campuslink/screens/dashboard/attendance_report.dart';
+import 'package:campuslink/screens/dashboard/event_detail_screen.dart';
+import 'package:campuslink/screens/dashboard/event_list_screen.dart';
+import 'package:campuslink/screens/dashboard/chatbot_manage.dart';
+import 'package:campuslink/screens/dashboard/student_management_screen.dart';
+import 'package:campuslink/screens/dashboard/teacher_management_screen.dart';
 import 'package:flutter/material.dart';
 import '../profile.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:intl/intl.dart';
+// Import other necessary screens based on roles
 
+class UserDashboard extends StatefulWidget {
+  final String userId;
+  final String userRole;
+  
+  const UserDashboard({
+    Key? key,
+    required this.userId,
+    required this.userRole,
+  }) : super(key: key);
 
-class StudentDashboard extends StatefulWidget {
-  // Stream controller for event updates
   static final StreamController<void> eventUpdateController = StreamController<void>.broadcast();
   
   @override
-  _StudentDashboardState createState() => _StudentDashboardState();
+  _UserDashboardState createState() => _UserDashboardState();
 }
 
-class _StudentDashboardState extends State<StudentDashboard> {
+class _UserDashboardState extends State<UserDashboard> {
   String eventTitle = 'Loading...';
   String? eventDate;
   late StreamSubscription eventUpdateSubscription;
@@ -26,9 +38,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
   void initState() {
     super.initState();
     fetchUpcomingEvent();
-    
-    // Listen to event updates
-    eventUpdateSubscription = StudentDashboard.eventUpdateController.stream.listen((_) {
+    eventUpdateSubscription = UserDashboard.eventUpdateController.stream.listen((_) {
       fetchUpcomingEvent();
     });
   }
@@ -76,6 +86,108 @@ class _StudentDashboardState extends State<StudentDashboard> {
     }
   }
 
+  List<Widget> _getQuickActionsByRole() {
+    switch (widget.userRole.toLowerCase()) {
+      case 'admin':
+        return [
+          _buildActionCard(
+            'Manage Students',
+            Icons.people_outline,
+            Colors.blue,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ManageStudentsScreen()),
+            ),
+          ),
+          _buildActionCard(
+            'Manage Teachers',
+            Icons.person,
+            Colors.green,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ManageTeachersScreen()),
+            ),
+          ),
+          _buildActionCard(
+            'Attendance',
+            Icons.check_circle_outline,
+            Colors.orange,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AdminAttendanceReport()),
+            ),
+          ),
+          _buildActionCard(
+            'Manage Chatbot',
+            Icons.smart_toy,
+            Colors.purple,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ChatbotManagementScreen(adminId: widget.userId)),
+            ),
+          ),
+          _buildActionCard(
+            'Manage Events',
+            Icons.event_note,
+            Colors.indigo,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => EventListScreen()),
+            ),
+          ),
+        ];
+      
+      case 'teacher':
+        return [
+          _buildActionCard(
+            'Manage Students',
+            Icons.people_outline,
+            Colors.blue,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ManageStudentsScreen()),
+            ),
+          ),
+          _buildActionCard(
+            'Attendance',
+            Icons.check_circle_outline,
+            Colors.orange,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AdminAttendanceReport()),
+            ),
+          ),
+          _buildActionCard(
+            'Manage Events',
+            Icons.event_note,
+            Colors.indigo,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => EventListScreen()),
+            ),
+          ),
+        ];
+      
+      case 'student':
+        return [
+          _buildActionCard(
+            'Attendance',
+            Icons.check_circle_outline,
+            Colors.orange,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AdminAttendanceReport()),
+            ),
+          ),
+        ];
+      
+      case 'guest':
+        return []; // No quick actions for guests
+      
+      default:
+        return [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,12 +196,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Color.fromARGB(255, 39, 46, 58)),
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Color.fromARGB(255, 39, 46, 58)),
               child: Center(
                 child: Text(
-                  "Student Menu",
-                  style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                  "${widget.userRole} Menu",
+                  style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -112,7 +224,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
       ),
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 39, 46, 58),
-        title: const Text('Student Dashboard', style: TextStyle(color: Colors.white)),
+        title: Text('${widget.userRole} Dashboard', 
+          style: const TextStyle(color: Colors.white)
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -137,9 +251,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Welcome Back, Student!',
-                      style: TextStyle(
+                    Text(
+                      'Welcome Back, ${widget.userId}!',
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E1E1E),
@@ -157,27 +271,29 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 ),
               ),
 
-              // Quick Stats Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    _buildQuickStatCard(
-                      'Total Students',
-                      '1,234',
-                      Icons.school,
-                      Colors.blue,
-                    ),
-                    const SizedBox(width: 15),
-                    _buildQuickStatCard(
-                      'Total Teachers',
-                      '89',
-                      Icons.person,
-                      Colors.green,
-                    ),
-                  ],
+              // Quick Stats Section (show only for admin and teacher)
+              if (widget.userRole.toLowerCase() == 'admin' || widget.userRole.toLowerCase() == 'teacher')
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      _buildQuickStatCard(
+                        'Total Students',
+                        '1,234',
+                        Icons.school,
+                        Colors.blue,
+                      ),
+                      const SizedBox(width: 15),
+                      if (widget.userRole.toLowerCase() == 'admin')
+                        _buildQuickStatCard(
+                          'Total Teachers',
+                          '89',
+                          Icons.person,
+                          Colors.green,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
 
               // Upcoming Events Section
               Container(
@@ -218,7 +334,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             ),
                           ],
                         ),
-                        // Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -237,7 +352,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             color: Colors.white.withOpacity(0.9), 
                             size: 16),
                         const SizedBox(width: 8),
-                        // In the Row widget where the date is displayed, replace the Text widget with:
                         Text(
                           eventDate == null 
                               ? 'Loading...'
@@ -250,80 +364,69 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EventDetailScreen(
-                              eventId: upcomingEvent['id']?.toString() ?? '1',
-                              onEventUpdated: () {
-                                // Refresh upcoming event when returning from detail screen
-                                fetchUpcomingEvent();
-                              },
+                    if (widget.userRole.toLowerCase() != 'guest')
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EventDetailScreen(
+                                eventId: upcomingEvent['id']?.toString() ?? '1',
+                                onEventUpdated: () {
+                                  fetchUpcomingEvent();
+                                },
+                              ),
                             ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.purple,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.purple,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('View Details'),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward, size: 16),
+                          ],
                         ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('View Details'),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 16),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
 
-              // Quick Actions Grid
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Quick Actions',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E1E1E),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 15,
-                      crossAxisSpacing: 15,
-                      children: [
-                        _buildActionCard(
-                          'Attendance',
-                          Icons.check_circle_outline,
-                          Colors.orange,
-                          () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => AdminAttendanceReport()),
-                            );
-                          },
+              // Quick Actions Grid (not shown for guests)
+              if (widget.userRole.toLowerCase() != 'guest')
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Quick Actions',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E1E1E),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 15),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 15,
+                        crossAxisSpacing: 15,
+                        children: _getQuickActionsByRole(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
