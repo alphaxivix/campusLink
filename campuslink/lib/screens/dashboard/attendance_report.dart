@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../profile.dart';
+import '../../widgets/profile.dart';
 
 
 class AdminAttendanceReport extends StatelessWidget {

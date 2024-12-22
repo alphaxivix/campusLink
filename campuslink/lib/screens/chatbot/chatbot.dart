@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import '../profile.dart';
+import '../../widgets/profile.dart';
 import '../chatbot/rasa_service.dart';
 
 

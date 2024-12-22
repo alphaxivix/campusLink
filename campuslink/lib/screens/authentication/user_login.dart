@@ -1,4 +1,7 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class LoginScreen extends StatefulWidget {
   final String userType;
@@ -13,38 +16,99 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   String? _errorMessage;
+  bool _isLoading = false;
 
   bool get _isAdminLogin => widget.userType.toLowerCase() == 'admin';
   bool get _isGuestLogin => widget.userType.toLowerCase() == 'guest';
 
-  void _validateAndLogin() {
-    setState(() {
-      _errorMessage = null;
-    });
+Future<void> _validateAndLogin() async {
+  setState(() {
+    _errorMessage = null;
+    _isLoading = true;
+  });
 
+  try {
     final username = _usernameController.text.trim();
-    final password = _passwordController.text;
 
     if (username.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter a username';
-      });
-      return;
+      throw 'Please enter a username';
     }
 
-    if (!_isGuestLogin && password.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter a password';
-      });
-      return;
+    // For non-guest users, verify password
+    if (!_isGuestLogin && _passwordController.text.isEmpty) {
+      throw 'Please enter a password';
     }
 
-    // If validation passes, navigate to main screen
-    Navigator.pushReplacementNamed(
-      context,
-      '/main',
-      arguments: widget.userType,
+    // Prepare request body
+    Map<String, dynamic> requestBody = {
+      'username': username,
+      'userType': widget.userType.toLowerCase(),
+    };
+
+    // Add password only for non-guest users
+    if (!_isGuestLogin) {
+      requestBody['password'] = _passwordController.text;
+    }
+
+    // Make API call
+    final response = await http.post(
+      Uri.parse('http://192.168.1.78/login.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(requestBody),
     );
+
+    if (response.body.isEmpty) {
+      throw 'Server returned empty response';
+    }
+
+    final data = jsonDecode(response.body);
+
+    // In _validateAndLogin method of LoginScreen
+if (data['status'] == 'success') {
+  // Extract user data
+  final userId = data['user']['user_id']?.toString() ?? 'Guest';
+  final userType = widget.userType;
+
+  // Store login status and user data (using shared_preferences)
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('isLoggedIn', true);
+  await prefs.setString('userId', userId);
+  await prefs.setString('userType', userType);
+
+  // Navigate to MainPage and remove all previous routes
+  Navigator.of(context).pushNamedAndRemoveUntil(
+    '/main',
+    (route) => false, // This removes all previous routes
+    arguments: {
+      'userType': userType,
+      'userId': userId,
+    },
+  );
+}else {
+      // Show the error message from the server
+      throw data['message'] ?? 'Login failed';
+    }
+  } catch (e) {
+    setState(() {
+      if (e is FormatException) {
+        _errorMessage = 'Invalid server response';
+      } else {
+        _errorMessage = e.toString();
+      }
+    });
+    print('Login error: $e'); // For debugging
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
+
+  Future<void> _saveUserData(Map<String, dynamic> userData) async {
+    // Implement secure storage of user data
+    // Example using flutter_secure_storage:
+    // final storage = FlutterSecureStorage();
+    // await storage.write(key: 'user_data', value: jsonEncode(userData));
   }
 
   @override
@@ -72,16 +136,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (!_isGuestLogin) ...[
-                  Text(
-                    'Welcome back to CampusLink',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[400],
-                    ),
+                Text(
+                  'Welcome back to CampusLink',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[400],
                   ),
-                ],
-
+                ),
                 const SizedBox(height: 48),
                 _buildTextField(
                   controller: _usernameController,
@@ -111,12 +172,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
-                 if (_isAdminLogin) ...[
+                if (_isAdminLogin) ...[
+                  const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // Implement forgot password functionality
+                      },
                       child: const Text(
                         'Forgot Password?',
                         style: TextStyle(color: Colors.blue),
@@ -125,10 +188,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
                 const SizedBox(height: 32),
-                 SizedBox(
+                SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _validateAndLogin,
+                    onPressed: _isLoading ? null : _validateAndLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -136,66 +199,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Text(
-                      _isGuestLogin ? 'Continue as Guest' : 'Login',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                 const SizedBox(height: 16),
-                if (!_isAdminLogin && !_isGuestLogin) ...[
-                   const SizedBox(height: 16),
-                    Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Colors.orange[300],
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Only enter the username and password allowed to you by the admin.',
-                            style: TextStyle(
-                              color: Colors.orange[300],
-                              fontSize: 14,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            _isGuestLogin ? 'Continue as Guest' : 'Login',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
                   ),
-                ],
-                   const SizedBox(height: 24),
-                 if (_isAdminLogin)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: TextStyle(color: Colors.grey[400]),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/adminSignup');
-                        },
-                        child: const Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                ),
               ],
             ),
           ),
@@ -205,43 +219,43 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool isPassword = false,
-    bool? obscureText,
-    VoidCallback? onToggleVisibility,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText ?? false,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: Colors.grey[400]),
-          prefixIcon: Icon(icon, color: Colors.grey[400]),
-          suffixIcon: isPassword
-              ? IconButton(
-                  icon: Icon(
-                    obscureText! ? Icons.visibility_off : Icons.visibility,
-                    color: Colors.grey[400],
-                  ),
-                  onPressed: onToggleVisibility,
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.grey[900],
+  required TextEditingController controller,
+  required String label,
+  required IconData icon,
+  bool isPassword = false,
+  bool? obscureText,
+  VoidCallback? onToggleVisibility,
+}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.grey[900],
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: TextField(
+      controller: controller,
+      obscureText: obscureText ?? false,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey[400]),
+        prefixIcon: Icon(icon, color: Colors.grey[400]),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscureText! ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey[400],
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
+        filled: true,
+        fillColor: Colors.grey[900],
       ),
-    );
-  }
+    ),
+  );
+}
 }

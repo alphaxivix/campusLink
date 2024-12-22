@@ -1,19 +1,29 @@
+import 'package:campuslink/data/data_provider.dart';
+import 'package:campuslink/models/teacher_and_student_model.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class ManageStudentsScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> students = [
-    {
-      'id': 'STD001',
-      'name': 'John Doe',
-      'grade': '10th',
-      'section': 'A',
-      'contact': '+1234567890',
-      'email': 'john.doe@email.com',
-    },
-    // Add more student data as needed
-  ];
+class ManageStudentsScreen extends StatefulWidget {
+  final String userType;
+  final String userId;
+
+  const ManageStudentsScreen({Key? key, required this.userType, required this.userId}) : super(key: key);
 
   @override
+  _ManageStudentsScreenState createState() => _ManageStudentsScreenState();
+}
+
+class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch students when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DataProvider>().fetchStudents();
+    });
+  }
+
+   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -21,138 +31,70 @@ class ManageStudentsScreen extends StatelessWidget {
         title: const Text('Manage Students', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            color: Colors.white,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search students...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
+      body: Consumer<DataProvider>(
+        builder: (context, dataProvider, child) {
+          if (dataProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Error: ${dataProvider.error}',
+                    style: TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                const SizedBox(width: 10),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.filter_list),
-                  onSelected: (value) {
-                    // Handle filter selection
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => dataProvider.fetchStudents(),
+                    child: Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (dataProvider.students.isEmpty) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  itemCount: dataProvider.students.length,
+                  itemBuilder: (context, index) {
+                    final student = dataProvider.students[index];
+                    return StudentCard(
+                      student: student,
+                      userType: widget.userType,
+                    );
                   },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'grade',
-                      child: Text('Filter by Grade'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'section',
-                      child: Text('Filter by Section'),
-                    ),
-                  ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: students.length,
-              itemBuilder: (context, index) {
-                final student = students[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: ExpansionTile(
-                    title: Text(
-                      student['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Text('ID: ${student['id']} | Grade: ${student['grade']}'),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: Column(
-                          children: [
-                            _buildInfoRow('Section', student['section']),
-                            _buildInfoRow('Contact', student['contact']),
-                            _buildInfoRow('Email', student['email']),
-                            const SizedBox(height: 15),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    // Handle edit
-                                  },
-                                  icon: const Icon(Icons.edit),
-                                  label: const Text('Edit'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                  ),
-                                ),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    // Handle delete
-                                  },
-                                  icon: const Icon(Icons.delete),
-                                  label: const Text('Delete'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Show add student dialog
-          _showAddStudentDialog(context);
+              ),
+            ],
+          );
         },
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.add),
       ),
+      floatingActionButton: widget.userType == 'Admin'
+          ? FloatingActionButton(
+              onPressed: () => _showAddStudentDialog(context),
+              backgroundColor: Colors.blue,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showAddStudentDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
+    final gradeController = TextEditingController();
+    final sectionController = TextEditingController();
+    final contactController = TextEditingController();
+    final emailController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -162,30 +104,33 @@ class ManageStudentsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Full Name'),
               ),
-              const SizedBox(height: 10),
               TextField(
-                decoration: InputDecoration(
-                  labelText: 'Grade',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+                controller: usernameController,
+                decoration: InputDecoration(labelText: 'Username'),
               ),
-              const SizedBox(height: 10),
               TextField(
-                decoration: InputDecoration(
-                  labelText: 'Section',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+                controller: passwordController,
+                decoration: InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
+              TextField(
+                controller: gradeController,
+                decoration: InputDecoration(labelText: 'Grade/Year'),
+              ),
+              TextField(
+                controller: sectionController,
+                decoration: InputDecoration(labelText: 'Section'),
+              ),
+              TextField(
+                controller: contactController,
+                decoration: InputDecoration(labelText: 'Contact'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(labelText: 'Email'),
               ),
             ],
           ),
@@ -197,7 +142,17 @@ class ManageStudentsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              // Handle save
+              final student = Student(
+                id: 'STD${DateTime.now().millisecondsSinceEpoch}',
+                name: nameController.text,
+                username: usernameController.text,
+                password: passwordController.text,
+                grade: gradeController.text,
+                section: sectionController.text,
+                contact: contactController.text,
+                email: emailController.text,
+              );
+              context.read<DataProvider>().addStudent(student);
               Navigator.pop(context);
             },
             child: const Text('Save'),
@@ -206,4 +161,173 @@ class ManageStudentsScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}
+
+class StudentCard extends StatelessWidget {
+  final Student student;
+  final String userType;
+
+  const StudentCard({Key? key, required this.student, required this.userType}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: ExpansionTile(
+        title: Text(student.name),
+        subtitle: Text('Grade: ${student.grade} | Username: ${student.username}'),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow('Username', student.username),
+                _buildInfoRow('Grade/Year', student.grade),
+                _buildInfoRow("Password", student.password),
+                _buildInfoRow('Section', student.section),
+                _buildInfoRow('Contact', student.contact),
+                _buildInfoRow('Email', student.email),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _showEditDialog(context),
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showDeleteDialog(context),
+                      icon: const Icon(Icons.delete),
+                      label: const Text('Delete'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(value),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context) {
+    final nameController = TextEditingController(text: student.name);
+    final usernameController = TextEditingController(text: student.username);
+    final passwordController = TextEditingController(text: student.password);
+    final gradeController = TextEditingController(text: student.grade);
+    final sectionController = TextEditingController(text: student.section);
+    final contactController = TextEditingController(text: student.contact);
+    final emailController = TextEditingController(text: student.email);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Student'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Full Name'),
+              ),
+              TextField(
+                controller: usernameController,
+                decoration: InputDecoration(labelText: 'Username'),
+              ),
+              TextField(
+                controller: passwordController,
+                decoration: InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
+              TextField(
+                controller: gradeController,
+                decoration: InputDecoration(labelText: 'Grade/Year'),
+              ),
+              TextField(
+                controller: sectionController,
+                decoration: InputDecoration(labelText: 'Section'),
+              ),
+              TextField(
+                controller: contactController,
+                decoration: InputDecoration(labelText: 'Contact'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedStudent = student.copyWith(
+                name: nameController.text,
+                username: usernameController.text,
+                password: passwordController.text,
+                grade: gradeController.text,
+                section: sectionController.text,
+                contact: contactController.text,
+                email: emailController.text,
+              );
+              context.read<DataProvider>().updateStudent(updatedStudent);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Student'),
+        content: Text('Are you sure you want to delete ${student.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<DataProvider>().deleteStudent(student.id);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}

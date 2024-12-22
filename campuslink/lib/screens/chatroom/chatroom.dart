@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import '../profile.dart';
+import '../../widgets/profile.dart';
 
 
 class Chatroom extends StatefulWidget {
@@ -52,7 +52,7 @@ class _ChatroomState extends State<Chatroom> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color.fromARGB(255, 39, 46, 58),
+        backgroundColor: Theme.of(context).primaryColor,
         title: Text('Chatroom', style: TextStyle(color: Colors.white)),
         actions: [
           IconButton(
@@ -67,7 +67,7 @@ class _ChatroomState extends State<Chatroom> {
         ],
       ),
       body: Container(
-        color: Colors.white,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
             Expanded(
@@ -109,17 +109,17 @@ class _ChatroomState extends State<Chatroom> {
                                   maxWidth: MediaQuery.of(context).size.width * 0.7,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isUserMessage
-                                      ? Colors.blue.shade100
-                                      : Colors.grey.shade200,
+                                  color: isUserMessage 
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   _messages[index].substring(4),
                                   style: TextStyle(
-                                    color: isUserMessage
-                                        ? Colors.black
-                                        : Colors.white,
+                                    color: isUserMessage 
+                                      ? Colors.white
+                                      : Theme.of(context).colorScheme.onSurface,
                                   ),
                                   softWrap: true,
                                   maxLines: null,
@@ -180,14 +180,13 @@ class _ChatroomState extends State<Chatroom> {
                   // Input Field
                   TextField(
                     controller: _controller,
-                    cursorColor: Colors.blue.shade700,
-                    textAlignVertical: TextAlignVertical.center,
-                    style: TextStyle(color: Colors.grey[800]),
+                    cursorColor: Theme.of(context).colorScheme.primary,
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
                       hintText: 'Say something...',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                       filled: true,
-                      fillColor: Colors.grey.shade100,
+                      fillColor: Theme.of(context).cardColor,
                       contentPadding: EdgeInsets.symmetric(
                         vertical: 10.0,
                         horizontal: 50.0,

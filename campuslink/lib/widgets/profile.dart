@@ -1,6 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  Future<void> logout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Clear all stored data
+      
+      // Navigate to login page and clear navigation stack
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/homeScreen', // Changed from '/' to '/login' for better semantics
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: ${e.toString()}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -13,6 +38,38 @@ class ProfilePage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          // Added logout button in AppBar
+          IconButton(
+            icon: Icon(Icons.logout),
+            color: Colors.white,
+            onPressed: () {
+              // Show confirmation dialog before logout
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Logout'),
+                    content: Text('Are you sure you want to logout?'),
+                    actions: [
+                      TextButton(
+                        child: Text('Cancel'),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      TextButton(
+                        child: Text('Logout'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          logout();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
         iconTheme: IconThemeData(
           color: Colors.white,
         ),

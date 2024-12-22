@@ -18,12 +18,14 @@ class NavItem {
 
 class MainPage extends StatefulWidget {
   final String userType;
+  final String userId;
 
-  const MainPage({super.key, required this.userType});
+  const MainPage({Key? key, required this.userType, required this.userId}) : super(key: key);
 
   @override
   State<MainPage> createState() => _MainPageState();
 }
+
 
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
@@ -53,7 +55,7 @@ class _MainPageState extends State<MainPage> {
     switch (widget.userType) {
       case 'Guest':
         _pages = [
-          UserDashboard(userRole: widget.userType, userId: 'OV'),
+          UserDashboard(userRole: widget.userType, userId: widget.userId),
           CommunityPost(),
           Chatbot(),
         ];
@@ -70,11 +72,11 @@ class _MainPageState extends State<MainPage> {
       case 'Teacher':
         _pages = [
           if (widget.userType == 'Admin')
-            UserDashboard(userRole: widget.userType, userId: 'OV')
+            UserDashboard(userRole: widget.userType, userId: widget.userId)
           else if (widget.userType == 'Student')
-            UserDashboard(userRole: widget.userType, userId: 'OV')
+            UserDashboard(userRole: widget.userType, userId: widget.userId)
           else
-            UserDashboard(userRole: widget.userType, userId: 'OV'),
+            UserDashboard(userRole: widget.userType, userId: widget.userId),
           CommunityPost(),
           Chatroom(),
           Chatbot(),

@@ -1,16 +1,16 @@
 import 'package:campuslink/screens/dashboard/attendance_report.dart';
-import 'package:campuslink/screens/dashboard/event_detail_screen.dart';
-import 'package:campuslink/screens/dashboard/event_list_screen.dart';
+import 'package:campuslink/screens/dashboard/event/event_detail_screen.dart';
+import 'package:campuslink/screens/dashboard/event/event_list_screen.dart';
 import 'package:campuslink/screens/dashboard/chatbot_manage.dart';
 import 'package:campuslink/screens/dashboard/student_management_screen.dart';
 import 'package:campuslink/screens/dashboard/teacher_management_screen.dart';
 import 'package:flutter/material.dart';
-import '../profile.dart';
+import '../../widgets/profile.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:intl/intl.dart';
-// Import other necessary screens based on roles
+import 'package:flutter_animate/flutter_animate.dart';
 
 class UserDashboard extends StatefulWidget {
   final String userId;
@@ -86,409 +86,415 @@ class _UserDashboardState extends State<UserDashboard> {
     }
   }
 
-  List<Widget> _getQuickActionsByRole() {
-    switch (widget.userRole.toLowerCase()) {
-      case 'admin':
-        return [
-          _buildActionCard(
-            'Manage Students',
-            Icons.people_outline,
-            Colors.blue,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ManageStudentsScreen()),
-            ),
-          ),
-          _buildActionCard(
-            'Manage Teachers',
-            Icons.person,
-            Colors.green,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ManageTeachersScreen()),
-            ),
-          ),
-          _buildActionCard(
-            'Attendance',
-            Icons.check_circle_outline,
-            Colors.orange,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AdminAttendanceReport()),
-            ),
-          ),
-          _buildActionCard(
-            'Manage Chatbot',
-            Icons.smart_toy,
-            Colors.purple,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatbotManagementScreen(adminId: widget.userId)),
-            ),
-          ),
-          _buildActionCard(
-            'Manage Events',
-            Icons.event_note,
-            Colors.indigo,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => EventListScreen()),
-            ),
-          ),
-        ];
-      
-      case 'teacher':
-        return [
-          _buildActionCard(
-            'Manage Students',
-            Icons.people_outline,
-            Colors.blue,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ManageStudentsScreen()),
-            ),
-          ),
-          _buildActionCard(
-            'Attendance',
-            Icons.check_circle_outline,
-            Colors.orange,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AdminAttendanceReport()),
-            ),
-          ),
-          _buildActionCard(
-            'Manage Events',
-            Icons.event_note,
-            Colors.indigo,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => EventListScreen()),
-            ),
-          ),
-        ];
-      
-      case 'student':
-        return [
-          _buildActionCard(
-            'Attendance',
-            Icons.check_circle_outline,
-            Colors.orange,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AdminAttendanceReport()),
-            ),
-          ),
-        ];
-      
-      case 'guest':
-        return []; // No quick actions for guests
-      
-      default:
-        return [];
-    }
-  }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(
+      backgroundColor: const Color(0xFF1A1A1A),
+      drawer: _buildModernDrawer(context),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ).animate().fadeIn().scale(),
+        ),
+        title: Text(
+          '${widget.userRole} Dashboard',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ).animate().fadeIn().slideX(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle, color: Colors.white),
+            onPressed: () => Navigator.push(
+              context, 
+              MaterialPageRoute(builder: (context) => ProfilePage())
+            ),
+          ).animate().fadeIn().scale(),
+        ],
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF6C63FF), Color(0xFF2C3E50)],
+            ),
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Welcome Section with animated gradient
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF6C63FF).withOpacity(0.1),
+                    const Color(0xFF2C3E50).withOpacity(0.05),
+                  ],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome Back,',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[400],
+                    ),
+                  ).animate().fadeIn().slideX(),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.userId,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                  ).animate().fadeIn().slideX(delay: 200.ms),
+                ],
+              ),
+            ),
+
+            // Stats Section with animated cards
+            if (widget.userRole.toLowerCase() == 'admin' || 
+                widget.userRole.toLowerCase() == 'teacher')
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildAnimatedStatCard(
+                        'Total Students',
+                        '1,234',
+                        Icons.school,
+                        const Color(0xFF6C63FF),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    if (widget.userRole.toLowerCase() == 'admin')
+                      Expanded(
+                        child: _buildAnimatedStatCard(
+                          'Total Teachers',
+                          '89',
+                          Icons.person,
+                          const Color(0xFF00B4D8),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+            // Upcoming Events Section with glass effect
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: _buildGlassEventCard(context),
+            ),
+
+            // Quick Actions Section with animated grid
+            if (widget.userRole.toLowerCase() != 'guest')
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quick Actions',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[300],
+                      ),
+                    ).animate().fadeIn().slideX(),
+                    const SizedBox(height: 16),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      children: _getQuickActionsByRole(),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernDrawer(BuildContext context) {
+    return Drawer(
+      child: Container(
+        color: const Color(0xFF1A1A1A),
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(color: Color.fromARGB(255, 39, 46, 58)),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF6C63FF), Color(0xFF2C3E50)],
+                ),
+              ),
               child: Center(
                 child: Text(
                   "${widget.userRole} Menu",
-                  style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.dashboard),
-              title: const Text('Dashboard', style: TextStyle(color: Colors.black)),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text('About', style: TextStyle(color: Colors.black)),
-              onTap: () {
-                // Implement your navigation logic
-              },
-            ),
+            _buildDrawerItem(Icons.dashboard, 'Dashboard', () => Navigator.pop(context)),
+            _buildDrawerItem(Icons.info, 'About', () {}),
           ],
         ),
       ),
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 39, 46, 58),
-        title: Text('${widget.userRole} Dashboard', 
-          style: const TextStyle(color: Colors.white)
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
-            },
+    );
+  }
+
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white),
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      onTap: onTap,
+    ).animate().fadeIn().slideX();
+  }
+
+  Widget _buildAnimatedStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D2D),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-        ),
-        child: SingleChildScrollView(
-          child: Column(
+      child: Stack(
+        children: [
+          // Animated background circle
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withOpacity(0.1),
+              ),
+            ).animate(
+              onPlay: (controller) => controller.repeat(),
+            ).scale(
+              duration: const Duration(seconds: 2),
+              begin: const Offset(0.8, 0.8),
+              end: const Offset(1.2, 1.2),
+            ),
+          ),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Section
               Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome Back, ${widget.userId}!',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E1E1E),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Here\'s what\'s happening today',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Quick Stats Section (show only for admin and teacher)
-              if (widget.userRole.toLowerCase() == 'admin' || widget.userRole.toLowerCase() == 'teacher')
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      _buildQuickStatCard(
-                        'Total Students',
-                        '1,234',
-                        Icons.school,
-                        Colors.blue,
-                      ),
-                      const SizedBox(width: 15),
-                      if (widget.userRole.toLowerCase() == 'admin')
-                        _buildQuickStatCard(
-                          'Total Teachers',
-                          '89',
-                          Icons.person,
-                          Colors.green,
-                        ),
-                    ],
-                  ),
-                ),
-
-              // Upcoming Events Section
-              Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.purple.shade400, Colors.purple.shade600],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.purple.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.event, color: Colors.white, size: 30),
-                            SizedBox(width: 10),
-                            Text(
-                              'Upcoming Event',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      eventTitle,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today, 
-                            color: Colors.white.withOpacity(0.9), 
-                            size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          eventDate == null 
-                              ? 'Loading...'
-                              : DateFormat('MMM dd, yyyy HH:mm').format(DateTime.parse(eventDate!)),
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    if (widget.userRole.toLowerCase() != 'guest')
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EventDetailScreen(
-                                eventId: upcomingEvent['id']?.toString() ?? '1',
-                                onEventUpdated: () {
-                                  fetchUpcomingEvent();
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.purple,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('View Details'),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, size: 16),
-                          ],
-                        ),
-                      ),
-                  ],
+                child: Icon(icon, color: color, size: 30),
+              ).animate().fadeIn().scale(),
+              const SizedBox(height: 15),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-              ),
-
-              // Quick Actions Grid (not shown for guests)
-              if (widget.userRole.toLowerCase() != 'guest')
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Quick Actions',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E1E1E),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 15,
-                        crossAxisSpacing: 15,
-                        children: _getQuickActionsByRole(),
-                      ),
-                    ],
-                  ),
+              ).animate().slideX().fadeIn(),
+              const SizedBox(height: 5),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[400],
                 ),
+              ).animate().slideX(delay: 200.ms).fadeIn(),
             ],
           ),
-        ),
+        ],
       ),
-    );
+    ).animate().fadeIn().scale();
   }
 
-  Widget _buildQuickStatCard(String title, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
+  Widget _buildGlassEventCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 30),
-            const SizedBox(height: 15),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E1E1E),
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
         ),
       ),
-    );
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.event,
+                color: Colors.white.withOpacity(0.9),
+                size: 30,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Upcoming Event',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ).animate().fadeIn().slideX(),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            eventTitle,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ).animate().fadeIn().slideX(delay: 200.ms),
+          const SizedBox(height: 12),
+          if (eventDate != null)
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  color: Colors.white.withOpacity(0.7),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('MMM dd, yyyy HH:mm').format(DateTime.parse(eventDate!)),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ).animate().fadeIn().slideX(delay: 400.ms),
+          if (widget.userRole.toLowerCase() != 'guest')
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: ElevatedButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EventDetailScreen(
+                      eventId: upcomingEvent['id']?.toString() ?? '1',
+                      onEventUpdated: fetchUpcomingEvent,
+                    ),
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6C63FF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text('View Details'),
+                    SizedBox(width: 8),
+                    Icon(Icons.arrow_forward, size: 16),
+                  ],
+                ),
+              ).animate().fadeIn().scale(delay: 600.ms),
+            ),
+        ],
+      ),
+    ).animate().fadeIn().scale();
   }
 
-  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+  List<Widget> _getQuickActionsByRole() {
+    final actions = <Widget>[];
+    final roleActions = {
+      'admin': [
+        ('Manage Students', Icons.people_outline, const Color(0xFF6C63FF), ManageStudentsScreen(userType: widget.userRole, userId: widget.userId,)),
+        ('Manage Teachers', Icons.person, const Color(0xFF00B4D8), ManageTeachersScreen()),
+        ('Attendance', Icons.check_circle_outline, const Color(0xFFFF6B6B), AdminAttendanceReport()),
+        ('Manage Chatbot', Icons.smart_toy, const Color(0xFFFFA62B), ChatbotManagementScreen(adminId: widget.userId)),
+        ('Manage Events', Icons.event_note, const Color(0xFF4CAF50), EventListScreen()),
+      ],
+      'teacher': [
+        ('Manage Students', Icons.people_outline, const Color(0xFF6C63FF), ManageStudentsScreen(userType: widget.userRole, userId: widget.userId,)),
+        ('Attendance', Icons.check_circle_outline, const Color(0xFFFF6B6B), AdminAttendanceReport()),
+        ('Manage Events', Icons.event_note, const Color(0xFF4CAF50), EventListScreen()),
+      ],
+      'student': [
+        ('Attendance', Icons.check_circle_outline, const Color(0xFFFF6B6B), AdminAttendanceReport()),
+      ],
+    };
+
+    final currentRoleActions = roleActions[widget.userRole.toLowerCase()] ?? [];
+    
+    for (var i = 0; i < currentRoleActions.length; i++) {
+      final (title, icon, color, screen) = currentRoleActions[i];
+      actions.add(
+        _buildAnimatedActionCard(title, icon, color, screen),
+      );
+    }
+
+    return actions;
+  }
+
+  Widget _buildAnimatedActionCard(String title, IconData icon, Color color, Widget screen) {
     return InkWell(
-      onTap: onTap,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => screen),
+      ),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          color: const Color(0xFF2D2D2D),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: color.withOpacity(0.2),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -502,7 +508,7 @@ class _UserDashboardState extends State<UserDashboard> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 30),
-            ),
+            ).animate().fadeIn().scale(),
             const SizedBox(height: 15),
             Text(
               title,
@@ -510,12 +516,12 @@ class _UserDashboardState extends State<UserDashboard> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1E1E1E),
+                color: Colors.white,
               ),
-            ),
+            ).animate().fadeIn().slideX(delay: 200.ms),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn().scale(delay: 400.ms);
   }
 }

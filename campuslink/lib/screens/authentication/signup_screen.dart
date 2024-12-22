@@ -1,5 +1,8 @@
+import 'package:campuslink/widgets/main_page.dart';
 import 'package:flutter/material.dart';
-
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+  
 class SignupScreen extends StatefulWidget {
   final String userType;
   const SignupScreen({Key? key, required this.userType}) : super(key: key);
@@ -18,6 +21,46 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
+
+
+Future<void> _registerUser() async {
+  final url = Uri.parse('http://192.168.1.78/signup.php');
+  try {
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': _nameController.text,
+        'institution': _institutionController.text,
+        'email': _emailController.text,
+        'password': _passwordController.text,
+        'user_type': widget.userType,
+      }),
+    );
+
+    final responseData = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && responseData['success']) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainPage(
+            userType: responseData['user_type'],
+            userId: responseData['user_id'],
+          ),
+        ),
+      );
+    } else {
+      setState(() {
+        _errorMessage = responseData['message'] ?? 'An error occurred';
+      });
+    }
+  } catch (e) {
+    setState(() {
+      _errorMessage = 'Error occurred: $e';
+    });
+  }
+}
 
 
   @override
@@ -146,10 +189,10 @@ class _SignupScreenState extends State<SignupScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        //Validation successful
-                        Navigator.pushReplacementNamed(context, '/main', arguments: widget.userType);
+                        _registerUser();
                       }
                     },
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       padding: const EdgeInsets.symmetric(vertical: 16),
