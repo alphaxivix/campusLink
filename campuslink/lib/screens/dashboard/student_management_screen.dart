@@ -53,9 +53,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             );
           }
 
-          if (dataProvider.students.isEmpty) {
-            return Center(child: CircularProgressIndicator());
-          }
+          // if (dataProvider.students.isEmpty) {
+          //   return Center(child: CircularProgressIndicator());
+          // }
 
           return Column(
             children: [

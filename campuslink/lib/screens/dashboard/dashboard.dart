@@ -452,7 +452,7 @@ class _UserDashboardState extends State<UserDashboard> {
     final roleActions = {
       'admin': [
         ('Manage Students', Icons.people_outline, const Color(0xFF6C63FF), ManageStudentsScreen(userType: widget.userRole, userId: widget.userId,)),
-        ('Manage Teachers', Icons.person, const Color(0xFF00B4D8), ManageTeachersScreen()),
+        ('Manage Teachers', Icons.person, const Color(0xFF00B4D8), ManageTeachersScreen(userType: widget.userRole, userId: widget.userId,)),
         ('Attendance', Icons.check_circle_outline, const Color(0xFFFF6B6B), AdminAttendanceReport()),
         ('Manage Chatbot', Icons.smart_toy, const Color(0xFFFFA62B), ChatbotManagementScreen(adminId: widget.userId)),
         ('Manage Events', Icons.event_note, const Color(0xFF4CAF50), EventListScreen()),

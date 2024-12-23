@@ -3,38 +3,83 @@ import 'package:campuslink/models/teacher_and_student_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class ManageTeachersScreen extends StatelessWidget {
+class ManageTeachersScreen extends StatefulWidget {
+  final String userType;
+  final String userId;
+
+  const ManageTeachersScreen({Key? key, required this.userType, required this.userId}) : super(key: key);
+
+  @override
+  _ManageTeachersScreenState createState() => _ManageTeachersScreenState();
+}
+
+class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch teachers when the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DataProvider>().fetchTeachers();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<DataProvider>(
-      builder: (context, dataProvider, child) {
-        return Scaffold(
-          appBar: AppBar(
-            backgroundColor: const Color.fromARGB(255, 39, 46, 58),
-            title: const Text('Manage Teachers', style: TextStyle(color: Colors.white)),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          body: Column(
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 39, 46, 58),
+        title: const Text('Manage Teachers', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Consumer<DataProvider>(
+        builder: (context, dataProvider, child) {
+          if (dataProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Error: ${dataProvider.error}',
+                    style: TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => dataProvider.fetchTeachers(),
+                    child: Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // if (dataProvider.teachers.isEmpty) {
+          //   return Center(child: CircularProgressIndicator());
+          // }
+
+          return Column(
             children: [
-              // Search bar implementation remains the same
               Expanded(
                 child: ListView.builder(
                   itemCount: dataProvider.teachers.length,
                   itemBuilder: (context, index) {
                     final teacher = dataProvider.teachers[index];
-                    return TeacherCard(teacher: teacher);
+                    return TeacherCard(
+                      teacher: teacher,
+                      userType: widget.userType,
+                    );
                   },
                 ),
               ),
             ],
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _showAddTeacherDialog(context),
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.add),
-          ),
-        );
-      },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddTeacherDialog(context),
+        backgroundColor: Colors.green,
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
@@ -79,7 +124,7 @@ class ManageTeachersScreen extends StatelessWidget {
               ),
               TextField(
                 controller: experienceController,
-                decoration: InputDecoration(labelText: 'Experience'),
+                decoration: InputDecoration(labelText: 'Experience (Years)'),
               ),
               TextField(
                 controller: contactController,
@@ -123,8 +168,9 @@ class ManageTeachersScreen extends StatelessWidget {
 
 class TeacherCard extends StatelessWidget {
   final Teacher teacher;
+  final String userType;
 
-  const TeacherCard({Key? key, required this.teacher}) : super(key: key);
+  const TeacherCard({Key? key, required this.teacher, required this.userType}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +178,7 @@ class TeacherCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: ExpansionTile(
         title: Text(teacher.name),
-        subtitle: Text('${teacher.subject} | ${teacher.username}'),
+        subtitle: Text('Subject: ${teacher.subject} | Username: ${teacher.username}'),
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -141,7 +187,6 @@ class TeacherCard extends StatelessWidget {
               children: [
                 _buildInfoRow('Username', teacher.username),
                 _buildInfoRow('Subject', teacher.subject),
-                _buildInfoRow("Password", teacher.password),
                 _buildInfoRow('Qualification', teacher.qualification),
                 _buildInfoRow('Experience', teacher.experience),
                 _buildInfoRow('Contact', teacher.contact),
@@ -229,7 +274,7 @@ class TeacherCard extends StatelessWidget {
               ),
               TextField(
                 controller: experienceController,
-                decoration: InputDecoration(labelText: 'Experience'),
+                decoration: InputDecoration(labelText: 'Experience (Years)'),
               ),
               TextField(
                 controller: contactController,
