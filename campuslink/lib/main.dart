@@ -30,7 +30,10 @@ import 'package:campuslink/widgets/splash_screen.dart';
     Widget build(BuildContext context) {
       return MaterialApp(
         title: 'CAMPUSLINK',
-        theme: AppTheme.darkTheme,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+
         home: SplashScreen(), // Use SplashScreen as home
         routes: {
           '/homeScreen': (context) => HomeScreen(),

@@ -1,4 +1,3 @@
-import 'package:campuslink/widgets/main_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -41,14 +40,14 @@ Future<void> _registerUser() async {
     final responseData = jsonDecode(response.body);
 
     if (response.statusCode == 200 && responseData['success']) {
-      Navigator.pushReplacement(
+      Navigator.pushNamedAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (context) => MainPage(
-            userType: responseData['user_type'],
-            userId: responseData['user_id'],
-          ),
-        ),
+        '/main',
+        (route) => false, // Removes all previous routes
+        arguments: {
+          'userType': responseData['user_type'],
+          'userId': responseData['user_id'],
+        },
       );
     } else {
       setState(() {
@@ -110,7 +109,7 @@ Future<void> _registerUser() async {
                 const SizedBox(height: 48),
                 _buildTextField(
                   controller: _nameController,
-                  label: 'Full Name',
+                  label: 'username',
                   icon: Icons.person_rounded,
                   validator: (value) {
                     if (value == null || value.isEmpty) {

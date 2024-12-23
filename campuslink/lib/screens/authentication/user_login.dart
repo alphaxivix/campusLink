@@ -186,6 +186,7 @@ if (data['status'] == 'success') {
                       ),
                     ),
                   ),
+                  
                 ],
                 const SizedBox(height: 32),
                 SizedBox(
@@ -210,6 +211,29 @@ if (data['status'] == 'success') {
                           ),
                   ),
                 ),
+                  const SizedBox(height: 24),
+                 if (_isAdminLogin)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(color: Colors.grey[400]),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/adminSignup');
+                        },
+                        child: const Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
