@@ -1,6 +1,9 @@
+import 'package:campuslink/data/data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import 'package:provider/provider.dart';
   
 class SignupScreen extends StatefulWidget {
   final String userType;
@@ -49,6 +52,9 @@ Future<void> _registerUser() async {
           'userId': responseData['user_id'],
         },
       );
+
+      final dataProvider = Provider.of<DataProvider>(context, listen: false);
+      dataProvider.currentInstitution = responseData['institution'];
     } else {
       setState(() {
         _errorMessage = responseData['message'] ?? 'An error occurred';

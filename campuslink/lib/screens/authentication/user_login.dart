@@ -1,3 +1,5 @@
+import 'package:campuslink/data/data_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +16,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _institutionController = TextEditingController();  // New controller
   bool _obscurePassword = true;
   String? _errorMessage;
   bool _isLoading = false;
@@ -21,94 +24,93 @@ class _LoginScreenState extends State<LoginScreen> {
   bool get _isAdminLogin => widget.userType.toLowerCase() == 'admin';
   bool get _isGuestLogin => widget.userType.toLowerCase() == 'guest';
 
-Future<void> _validateAndLogin() async {
-  setState(() {
-    _errorMessage = null;
-    _isLoading = true;
-  });
-
-  try {
-    final username = _usernameController.text.trim();
-
-    if (username.isEmpty) {
-      throw 'Please enter a username';
-    }
-
-    // For non-guest users, verify password
-    if (!_isGuestLogin && _passwordController.text.isEmpty) {
-      throw 'Please enter a password';
-    }
-
-    // Prepare request body
-    Map<String, dynamic> requestBody = {
-      'username': username,
-      'userType': widget.userType.toLowerCase(),
-    };
-
-    // Add password only for non-guest users
-    if (!_isGuestLogin) {
-      requestBody['password'] = _passwordController.text;
-    }
-
-    // Make API call
-    final response = await http.post(
-      Uri.parse('http://192.168.1.78/login.php'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.body.isEmpty) {
-      throw 'Server returned empty response';
-    }
-
-    final data = jsonDecode(response.body);
-
-    // In _validateAndLogin method of LoginScreen
-if (data['status'] == 'success') {
-  // Extract user data
-  final userId = data['user']['user_id']?.toString() ?? 'Guest';
-  final userType = widget.userType;
-
-  // Store login status and user data (using shared_preferences)
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('isLoggedIn', true);
-  await prefs.setString('userId', userId);
-  await prefs.setString('userType', userType);
-
-  // Navigate to MainPage and remove all previous routes
-  Navigator.of(context).pushNamedAndRemoveUntil(
-    '/main',
-    (route) => false, // This removes all previous routes
-    arguments: {
-      'userType': userType,
-      'userId': userId,
-    },
-  );
-}else {
-      // Show the error message from the server
-      throw data['message'] ?? 'Login failed';
-    }
-  } catch (e) {
+  Future<void> _validateAndLogin() async {
     setState(() {
-      if (e is FormatException) {
-        _errorMessage = 'Invalid server response';
-      } else {
-        _errorMessage = e.toString();
+      _errorMessage = null;
+      _isLoading = true;
+    });
+
+    try {
+      final username = _usernameController.text.trim();
+      final institution = _institutionController.text.trim();
+
+      if (username.isEmpty) {
+        throw 'Please enter a username';
       }
-    });
-    print('Login error: $e'); // For debugging
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
-  }
-}
 
-  Future<void> _saveUserData(Map<String, dynamic> userData) async {
-    // Implement secure storage of user data
-    // Example using flutter_secure_storage:
-    // final storage = FlutterSecureStorage();
-    // await storage.write(key: 'user_data', value: jsonEncode(userData));
+      // Check institution for non-guest users
+      if (!_isGuestLogin && institution.isEmpty) {
+        throw 'Please enter your institution';
+      }
+
+      // For non-guest users, verify password
+      if (!_isGuestLogin && _passwordController.text.isEmpty) {
+        throw 'Please enter a password';
+      }
+
+      // Prepare request body
+      Map<String, dynamic> requestBody = {
+        'username': username,
+        'userType': widget.userType.toLowerCase(),
+      };
+
+      // Add password and institution for non-guest users
+      if (!_isGuestLogin) {
+        requestBody['password'] = _passwordController.text;
+        requestBody['institution'] = institution;
+      }
+
+      // Make API call
+      final response = await http.post(
+        Uri.parse('http://192.168.1.78/login.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.body.isEmpty) {
+        throw 'Server returned empty response';
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data['status'] == 'success') {
+        final userId = data['user']['user_id']?.toString() ?? 'Guest';
+        final userType = widget.userType;
+        final dataProvider = Provider.of<DataProvider>(context, listen: false);
+        dataProvider.currentInstitution = data['user']['institution']?.toString() ?? 'Guest';
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('userId', userId);
+        await prefs.setString('userType', userType);
+        await prefs.setString('institution', institution);  // Save institution
+
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/main',
+          (route) => false,
+          arguments: {
+            'userType': userType,
+            'userId': userId,
+            'institution': institution,  // Pass institution to main screen
+          },
+        );
+      } else {
+        throw data['message'] ?? 'Login failed';
+      }
+    } catch (e) {
+      setState(() {
+        if (e is FormatException) {
+          _errorMessage = 'Invalid server response';
+        } else {
+          _errorMessage = e.toString();
+        }
+      });
+      print('Login error: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -150,6 +152,12 @@ if (data['status'] == 'success') {
                   icon: Icons.person_rounded,
                 ),
                 if (!_isGuestLogin) ...[
+                  const SizedBox(height: 24),
+                  _buildTextField(
+                    controller: _institutionController,
+                    label: 'Institution',
+                    icon: Icons.school_rounded,
+                  ),
                   const SizedBox(height: 24),
                   _buildTextField(
                     controller: _passwordController,

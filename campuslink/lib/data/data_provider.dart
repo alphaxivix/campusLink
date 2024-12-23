@@ -4,122 +4,155 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class DataProvider with ChangeNotifier {
-  // Update the base URL to point directly to user.php
   final String baseUrl = 'http://192.168.1.78/manage_teacher_and_student/user.php';
   List<Student> _students = [];
   List<Teacher> _teachers = [];
   String? _error;
+  String? _currentInstitution; // Add current user ID
+
+  // Getter and setter for current user ID
+  String? get currentInstitution => _currentInstitution;
+  set currentInstitution(String? institution) {
+    _currentInstitution = institution;
+    notifyListeners();
+  }
 
   List<Student> get students => _students;
   List<Teacher> get teachers => _teachers;
   String? get error => _error;
 
-
   // Teacher Methods
-  // Teacher Methods
-Future<void> fetchTeachers() async {
-  try {
-    print('Fetching teachers from: $baseUrl?endpoint=teachers');
-    
-    final response = await http.get(Uri.parse('$baseUrl?endpoint=teachers'));
-    
-    print('Response status code: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      _teachers = data.map((json) => Teacher.fromJson(json)).toList();
-      _error = null;
+  Future<void> fetchTeachers() async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
       notifyListeners();
-    } else {
-      _error = 'Failed to fetch teachers. Status code: ${response.statusCode}';
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?endpoint=teachers&institution=$_currentInstitution'),
+      );
+      
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _teachers = data.map((json) => Teacher.fromJson(json)).toList();
+        _error = null;
+        notifyListeners();
+      } else {
+        _error = 'Failed to fetch teachers. Status code: ${response.statusCode}';
+        _teachers = [];
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = 'Error fetching teachers: $e';
       _teachers = [];
       notifyListeners();
     }
-  } catch (e) {
-    print('Error fetching teachers: $e');
-    _error = 'Error fetching teachers: $e';
-    _teachers = [];
-    notifyListeners();
   }
-}
 
-Future<void> addTeacher(Teacher teacher) async {
-  try {
-    print('Adding teacher: ${json.encode(teacher.toJson())}');
-    
-    final response = await http.post(
-      Uri.parse('$baseUrl?endpoint=teachers'),
-      body: json.encode(teacher.toJson()),
-      headers: {'Content-Type': 'application/json'},
-    );
-
-    print('Add teacher response: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      await fetchTeachers();
-    } else {
-      _error = 'Failed to add teacher. Status code: ${response.statusCode}';
+  Future<void> addTeacher(Teacher teacher) async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
       notifyListeners();
+      return;
     }
-  } catch (e) {
-    print('Error adding teacher: $e');
-    _error = 'Error adding teacher: $e';
-    notifyListeners();
-  }
-}
 
-Future<void> updateTeacher(Teacher teacher) async {
-  try {
-    final response = await http.put(
-      Uri.parse('$baseUrl?endpoint=teachers'),
-      body: json.encode(teacher.toJson()),
-      headers: {'Content-Type': 'application/json'},
-    );
-
-    if (response.statusCode == 200) {
-      await fetchTeachers();
-    } else {
-      _error = 'Failed to update teacher';
-      notifyListeners();
-    }
-  } catch (e) {
-    _error = 'Error updating teacher: $e';
-    notifyListeners();
-  }
-}
-
-Future<void> deleteTeacher(String id) async {
-  try {
-    final response = await http.delete(
-      Uri.parse('$baseUrl?endpoint=teachers'),
-      body: json.encode({'id': id}),
-      headers: {'Content-Type': 'application/json'},
-    );
-
-    if (response.statusCode == 200) {
-      await fetchTeachers();
-    } else {
-      _error = 'Failed to delete teacher';
-      notifyListeners();
-    }
-  } catch (e) {
-    _error = 'Error deleting teacher: $e';
-    notifyListeners();
-  }
-}
-
-Future<void> fetchStudents() async {
     try {
-      // Add debug print
-      print('Fetching students from: $baseUrl?endpoint=students');
-      
-      final response = await http.get(Uri.parse('$baseUrl?endpoint=students'));
-      
-      // Debug response
-      print('Response status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      final Map<String, dynamic> teacherData = teacher.toJson();
+      teacherData['institution'] = _currentInstitution; // Add institution to the request
+
+      final response = await http.post(
+        Uri.parse('$baseUrl?endpoint=teachers'),
+        body: json.encode(teacherData),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        await fetchTeachers();
+      } else {
+        _error = 'Failed to add teacher. Status code: ${response.statusCode}';
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = 'Error adding teacher: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateTeacher(Teacher teacher) async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final Map<String, dynamic> teacherData = teacher.toJson();
+      teacherData['institution'] = _currentInstitution;
+
+      final response = await http.put(
+        Uri.parse('$baseUrl?endpoint=teachers'),
+        body: json.encode(teacherData),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        await fetchTeachers();
+      } else {
+        _error = 'Failed to update teacher';
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = 'Error updating teacher: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTeacher(String id) async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl?endpoint=teachers'),
+        body: json.encode({
+          'id': id,
+          'institution': _currentInstitution,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        await fetchTeachers();
+      } else {
+        _error = 'Failed to delete teacher';
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = 'Error deleting teacher: $e';
+      notifyListeners();
+    }
+  }
+
+  // Student Methods
+  Future<void> fetchStudents() async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?endpoint=students&institution=$_currentInstitution'),
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -132,7 +165,6 @@ Future<void> fetchStudents() async {
         notifyListeners();
       }
     } catch (e) {
-      print('Error fetching students: $e');
       _error = 'Error fetching students: $e';
       _students = [];
       notifyListeners();
@@ -140,17 +172,21 @@ Future<void> fetchStudents() async {
   }
 
   Future<void> addStudent(Student student) async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
+      notifyListeners();
+      return;
+    }
+
     try {
-      print('Adding student: ${json.encode(student.toJson())}');
-      
+      final Map<String, dynamic> studentData = student.toJson();
+      studentData['institution'] = _currentInstitution;
+
       final response = await http.post(
         Uri.parse('$baseUrl?endpoint=students'),
-        body: json.encode(student.toJson()),
+        body: json.encode(studentData),
         headers: {'Content-Type': 'application/json'},
       );
-
-      print('Add student response: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         await fetchStudents();
@@ -159,17 +195,25 @@ Future<void> fetchStudents() async {
         notifyListeners();
       }
     } catch (e) {
-      print('Error adding student: $e');
       _error = 'Error adding student: $e';
       notifyListeners();
     }
   }
 
   Future<void> updateStudent(Student student) async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
+      notifyListeners();
+      return;
+    }
+
     try {
+      final Map<String, dynamic> studentData = student.toJson();
+      studentData['institution'] = _currentInstitution;
+
       final response = await http.put(
         Uri.parse('$baseUrl?endpoint=students'),
-        body: json.encode(student.toJson()),
+        body: json.encode(studentData),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -186,10 +230,19 @@ Future<void> fetchStudents() async {
   }
 
   Future<void> deleteStudent(String id) async {
+    if (_currentInstitution == null) {
+      _error = 'No user ID provided';
+      notifyListeners();
+      return;
+    }
+
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl?endpoint=students'),
-        body: json.encode({'id': id}),
+        body: json.encode({
+          'id': id,
+          'institution': _currentInstitution,
+        }),
         headers: {'Content-Type': 'application/json'},
       );
 
