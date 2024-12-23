@@ -291,25 +291,7 @@ class _UserDashboardState extends State<UserDashboard> {
       ),
       child: Stack(
         children: [
-          // Animated background circle
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withOpacity(0.1),
-              ),
-            ).animate(
-              onPlay: (controller) => controller.repeat(),
-            ).scale(
-              duration: const Duration(seconds: 2),
-              begin: const Offset(0.8, 0.8),
-              end: const Offset(1.2, 1.2),
-            ),
-          ),
+        
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
