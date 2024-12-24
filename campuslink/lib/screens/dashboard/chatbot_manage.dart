@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class ChatbotManagementScreen extends StatefulWidget {
   final String adminId;
+  
 
   const ChatbotManagementScreen({
     Key? key,
@@ -19,6 +22,18 @@ class _ChatbotManagementScreenState extends State<ChatbotManagementScreen> {
   List<PredefinedQuestion> predefinedQuestions = [];
   List<AdminAnswer> adminAnswers = [];
   bool _isLoading = false;
+  String institution = '';
+
+Future<void> loadUserData() async {
+  final prefs = await SharedPreferences.getInstance();
+  // Safely handle the case where 'institution' might not be stored in SharedPreferences
+  institution = prefs.getString('institution') ?? '';
+  
+  // Optionally print to debug
+  print('Institution loaded: $institution');
+}
+
+
 
   @override
   void initState() {
@@ -50,24 +65,33 @@ class _ChatbotManagementScreenState extends State<ChatbotManagementScreen> {
     }
   }
 
-  Future<void> fetchAdminAnswers() async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://192.168.1.78/get_admin_answers.php?admin_id=${widget.adminId}')
-      );
+void fetchAdminAnswers() async {
+  await loadUserData(); // Make sure data is loaded before the request
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        setState(() {
-          adminAnswers = data
-              .map((json) => AdminAnswer.fromJson(json))
-              .toList();
-        });
-      }
-    } catch (e) {
-      _showErrorSnackBar('Failed to load admin answers: $e');
-    }
+  if (institution.isEmpty) {
+    _showErrorSnackBar('Institution ID is required');
+    return;
   }
+
+  try {
+    final response = await http.get(
+      Uri.parse('http://192.168.1.78/get_admin_answers.php?institution=$institution')
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      setState(() {
+        adminAnswers = data.map((json) => AdminAnswer.fromJson(json)).toList();
+      });
+    } else {
+      _showErrorSnackBar('Failed to load admin answers: ${response.statusCode}');
+    }
+  } catch (e) {
+    _showErrorSnackBar('Failed to load admin answers: $e');
+  }
+}
+
+
 
 Future<void> saveAdminAnswer(AdminAnswer answer) async {
   try {
@@ -77,7 +101,7 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
       'question_id': answer.questionId,
       'answer': answer.answer,
       'active': answer.active,
-      'admin_id': widget.adminId,
+      'institution': institution,
     };
 
     final response = await http.post(
