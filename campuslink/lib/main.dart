@@ -1,5 +1,4 @@
   import 'package:campuslink/app_theme.dart';
-  import 'package:campuslink/screens/dashboard/attendance_report.dart';
   import 'package:campuslink/screens/authentication/user_login.dart';
   import 'package:campuslink/screens/authentication/signup_screen.dart';
   import 'package:campuslink/screens/chatbot/chatbot.dart';
@@ -40,14 +39,12 @@ import 'package:campuslink/widgets/splash_screen.dart';
           // Admin Flow
           '/adminLogin': (context) => LoginScreen(userType: "Admin"),
           '/adminSignup': (context) => SignupScreen(userType: "Admin"),
-          '/admin_attendance_report': (context) => AdminAttendanceReport(),
           '/admin_community_post': (context) => CommunityPost(),
           '/admin_chatbot': (context) => Chatbot(),
           '/adminProfile': (context) => ProfilePage(),
 
           // Teacher Flow
           '/teacherLogin': (context) => LoginScreen(userType: 'Teacher'),
-          '/teacherAttendanceReport': (context) => AdminAttendanceReport(),
           '/teacherCommunityPost': (context) => CommunityPost(),
           '/teacherChatroom': (context) => Chatroom(),
           '/teacherChatbot': (context) => Chatbot(),

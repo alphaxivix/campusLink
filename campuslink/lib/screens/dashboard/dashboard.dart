@@ -452,7 +452,7 @@ Widget _buildAnimatedActionCard(String title, IconData icon, Color color, Widget
           ManageTeachersScreen(userType: widget.userRole, userId: widget.userId,)),
         ('Attendance', Icons.check_circle_outline, 
           isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
-          AdminAttendanceReport()),
+          AttendanceReport(isStudent: false, studentId: widget.userId,)),
         ('Manage Chatbot', Icons.smart_toy, 
           isDarkMode ? theme.colorScheme.tertiary : const Color(0xFFFFA62B), 
           ChatbotManagementScreen(adminId: widget.userId)),
@@ -466,7 +466,7 @@ Widget _buildAnimatedActionCard(String title, IconData icon, Color color, Widget
           ManageStudentsScreen(userType: widget.userRole, userId: widget.userId,)),
         ('Attendance', Icons.check_circle_outline, 
           isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
-          AdminAttendanceReport()),
+          AttendanceReport(isStudent: false, studentId: widget.userId,)),
         ('Manage Events', Icons.event_note, 
           isDarkMode ? theme.colorScheme.secondary : const Color(0xFF4CAF50), 
           EventListScreen()),
@@ -474,7 +474,7 @@ Widget _buildAnimatedActionCard(String title, IconData icon, Color color, Widget
       'student': [
         ('Attendance', Icons.check_circle_outline, 
           isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
-          AdminAttendanceReport()),
+          AttendanceReport(isStudent: true, studentId: widget.userId,)),
       ],
     };
 
