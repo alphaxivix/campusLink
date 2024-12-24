@@ -2,15 +2,15 @@ import 'dart:convert';
 import 'package:campuslink/models/teacher_and_student_model.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DataProvider with ChangeNotifier {
   final String baseUrl = 'http://192.168.1.78/manage_teacher_and_student/user.php';
   List<Student> _students = [];
   List<Teacher> _teachers = [];
   String? _error;
-  String? _currentInstitution; // Add current user ID
+  String? _currentInstitution;
 
-  // Getter and setter for current user ID
   String? get currentInstitution => _currentInstitution;
   set currentInstitution(String? institution) {
     _currentInstitution = institution;
@@ -21,8 +21,23 @@ class DataProvider with ChangeNotifier {
   List<Teacher> get teachers => _teachers;
   String? get error => _error;
 
-  // Teacher Methods
+  // Load user data from shared preferences
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final institution = prefs.getString('institution');
+
+    if (institution != null) {
+      _currentInstitution = institution;
+      notifyListeners(); // Notify listeners when data is set
+    }
+  }
+
+  // Fetch teachers after loading user data
   Future<void> fetchTeachers() async {
+    // First load user data before fetching teachers
+    await loadUserData(); 
+
+    // If user data isn't available, don't proceed
     if (_currentInstitution == null) {
       _error = 'No user ID provided';
       notifyListeners();
@@ -33,9 +48,6 @@ class DataProvider with ChangeNotifier {
       final response = await http.get(
         Uri.parse('$baseUrl?endpoint=teachers&institution=$_currentInstitution'),
       );
-      
-      print('Response status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -142,7 +154,9 @@ class DataProvider with ChangeNotifier {
   }
 
   // Student Methods
-  Future<void> fetchStudents() async {
+ Future<void> fetchStudents() async {
+    await loadUserData(); // Load user data before fetching students
+
     if (_currentInstitution == null) {
       _error = 'No user ID provided';
       notifyListeners();

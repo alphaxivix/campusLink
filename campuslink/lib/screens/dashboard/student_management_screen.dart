@@ -18,6 +18,8 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   void initState() {
     super.initState();
     // Fetch students when screen loads
+    final dataProvider = Provider.of<DataProvider>(context, listen: false);
+    dataProvider.loadUserData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DataProvider>().fetchStudents();
     });

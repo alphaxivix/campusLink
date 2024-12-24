@@ -1,4 +1,5 @@
 import 'package:campuslink/data/data_provider.dart';
+import 'package:campuslink/data/save_user_data.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
@@ -74,10 +75,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final data = jsonDecode(response.body);
 
       if (data['status'] == 'success') {
-        final userId = data['user']['user_id']?.toString() ?? 'Guest';
+        final userId = data['user']['user_id']?.toString() ?? '';
         final userType = widget.userType;
         final dataProvider = Provider.of<DataProvider>(context, listen: false);
-        dataProvider.currentInstitution = data['user']['institution']?.toString() ?? 'Guest';
+        dataProvider.currentInstitution = data['user']['institution']?.toString() ?? '';
+
+        saveUserData(data['user']['institution']?.toString() ?? '');
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);

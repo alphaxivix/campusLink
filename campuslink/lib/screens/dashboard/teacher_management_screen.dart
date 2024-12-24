@@ -18,6 +18,8 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   void initState() {
     super.initState();
     // Fetch teachers when the screen loads
+    final dataProvider = Provider.of<DataProvider>(context, listen: false);
+    dataProvider.loadUserData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DataProvider>().fetchTeachers();
     });

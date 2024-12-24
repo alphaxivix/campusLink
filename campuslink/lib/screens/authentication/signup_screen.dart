@@ -1,4 +1,5 @@
 import 'package:campuslink/data/data_provider.dart';
+import 'package:campuslink/data/save_user_data.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -55,6 +56,8 @@ Future<void> _registerUser() async {
 
       final dataProvider = Provider.of<DataProvider>(context, listen: false);
       dataProvider.currentInstitution = responseData['institution'];
+
+      saveUserData(responseData['institution']);
     } else {
       setState(() {
         _errorMessage = responseData['message'] ?? 'An error occurred';
