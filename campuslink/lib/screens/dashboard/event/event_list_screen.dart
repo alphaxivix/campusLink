@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'event_form.dart';
+import '../../../app_theme.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({Key? key}) : super(key: key);
@@ -37,7 +38,6 @@ class _EventListScreenState extends State<EventListScreen> {
         }
         
         final List<dynamic> decodedData = json.decode(response.body);
-        // Sort events by date
         decodedData.sort((a, b) => DateTime.parse(a['event_date'])
             .compareTo(DateTime.parse(b['event_date'])));
             
@@ -60,11 +60,29 @@ class _EventListScreenState extends State<EventListScreen> {
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white)),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.red.shade800,
-        margin: EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white)),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppTheme.successColor,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -73,25 +91,9 @@ class _EventListScreenState extends State<EventListScreen> {
     try {
       final response = await http.delete(Uri.parse('$baseUrl?id=$id'));
       if (response.statusCode == 200) {
-        // Notify AdminDashboard about the event update
         UserDashboard.eventUpdateController.add(null);
-        
         _loadEvents();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Event deleted successfully'),
-              ],
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green.shade800,
-            margin: EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
+        _showSuccessSnackBar('Event deleted successfully');
       }
     } catch (e) {
       _showErrorSnackBar('Error deleting event: $e');
@@ -120,21 +122,25 @@ class _EventListScreenState extends State<EventListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
-        title: const Text('Events'),
+        title: Text('Events', style: theme.appBarTheme.titleTextStyle),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: theme.appBarTheme.iconTheme?.color),
             onPressed: _loadEvents,
           ),
         ],
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
+          ? Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
             )
           : events.isEmpty
               ? Center(
@@ -144,14 +150,13 @@ class _EventListScreenState extends State<EventListScreen> {
                       Icon(
                         Icons.event_busy,
                         size: 64,
-                        color: Colors.grey[400],
+                        color: theme.colorScheme.onSurface.withOpacity(0.4),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'No events found',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -165,6 +170,7 @@ class _EventListScreenState extends State<EventListScreen> {
                 )
               : RefreshIndicator(
                   onRefresh: _loadEvents,
+                  color: theme.colorScheme.primary,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: events.length,
@@ -185,22 +191,20 @@ class _EventListScreenState extends State<EventListScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Text(
                                 timeStatus,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  color: theme.colorScheme.onBackground,
                                 ),
                               ),
                             ),
-                            _buildEventCard(event, isPastEvent),
+                            _buildEventCard(event, isPastEvent, theme),
                           ],
                         );
                       }
-                      return _buildEventCard(event, isPastEvent);
+                      return _buildEventCard(event, isPastEvent, theme);
                     },
                   ),
                 ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
             context,
@@ -208,21 +212,22 @@ class _EventListScreenState extends State<EventListScreen> {
           );
           if (result == true) {
             _loadEvents();
-            // Notify AdminDashboard about new event
             UserDashboard.eventUpdateController.add(null);
           }
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Event'),
+        child: const Icon(Icons.add),
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
+
     );
   }
 
-  Widget _buildEventCard(Map<String, dynamic> event, bool isPastEvent) {
+  Widget _buildEventCard(Map<String, dynamic> event, bool isPastEvent, ThemeData theme) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: theme.cardTheme.elevation ?? 2,
+      shape: theme.cardTheme.shape,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
@@ -248,33 +253,48 @@ class _EventListScreenState extends State<EventListScreen> {
                   Expanded(
                     child: Text(
                       event['title'] ?? 'No Title',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isPastEvent ? Colors.grey : Colors.black87,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: isPastEvent 
+                          ? theme.colorScheme.onSurface.withOpacity(0.6)
+                          : theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
                   PopupMenuButton(
-                    icon: const Icon(Icons.more_vert),
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: theme.colorScheme.onSurface,
+                    ),
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'edit',
                         child: Row(
-                          children: const [
-                            Icon(Icons.edit, size: 20),
-                            SizedBox(width: 8),
-                            Text('Edit'),
+                          children: [
+                            Icon(Icons.edit, 
+                              size: 20,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                            const SizedBox(width: 8),
+                            Text('Edit', 
+                              style: theme.textTheme.bodyMedium,
+                            ),
                           ],
                         ),
                       ),
                       PopupMenuItem(
                         value: 'delete',
                         child: Row(
-                          children: const [
-                            Icon(Icons.delete, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
+                          children: [
+                            Icon(Icons.delete, 
+                              size: 20,
+                              color: theme.colorScheme.error,
+                            ),
+                            const SizedBox(width: 8),
+                            Text('Delete',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.error,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -290,7 +310,6 @@ class _EventListScreenState extends State<EventListScreen> {
                         );
                         if (result == true) {
                           _loadEvents();
-                          // Notify AdminDashboard about edited event
                           UserDashboard.eventUpdateController.add(null);
                         }
                       } else if (value == 'delete') {
@@ -306,14 +325,14 @@ class _EventListScreenState extends State<EventListScreen> {
                   Icon(
                     Icons.access_time,
                     size: 16,
-                    color: Colors.grey[600],
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     DateFormat('MMM dd, yyyy HH:mm')
                         .format(DateTime.parse(event['event_date'])),
-                    style: TextStyle(
-                      color: Colors.grey[600],
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -325,13 +344,13 @@ class _EventListScreenState extends State<EventListScreen> {
                     Icon(
                       Icons.location_on,
                       size: 16,
-                      color: Colors.grey[600],
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       event['location'],
-                      style: TextStyle(
-                        color: Colors.grey[600],
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],

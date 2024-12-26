@@ -16,6 +16,7 @@ class EventDetailScreen extends StatefulWidget {
   @override
   _EventDetailScreenState createState() => _EventDetailScreenState();
 }
+
 class _EventDetailScreenState extends State<EventDetailScreen> {
   Map<String, dynamic> eventDetails = {};
   List<dynamic> schedules = [];
@@ -51,9 +52,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       body: isLoading 
-        ? const Center(child: CircularProgressIndicator())
+        ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
         : CustomScrollView(
             slivers: [
               SliverAppBar(
@@ -61,11 +64,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 floating: false,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                  title: Text(eventDetails['title'] ?? 'Event Details'),
+                  title: Text(
+                    eventDetails['title'] ?? 'Event Details',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
                   background: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.purple.shade400, Colors.purple.shade600],
+                        colors: [
+                          theme.colorScheme.primary,
+                          theme.colorScheme.primary.withOpacity(0.8),
+                          theme.colorScheme.primary.withOpacity(0.6),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -80,6 +92,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildInfoCard(
+                        context,
                         icon: Icons.calendar_today,
                         title: 'Date & Time',
                         content: DateFormat('MMMM dd, yyyy - HH:mm')
@@ -87,6 +100,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       _buildInfoCard(
+                        context,
                         icon: Icons.location_on,
                         title: 'Location',
                         content: eventDetails['location'] ?? 'TBA',
@@ -94,14 +108,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       _buildInfoCard(
+                        context,
                         icon: Icons.description,
                         title: 'Description',
                         content: eventDetails['description'] ?? 'No description available',
                       ),
                       const SizedBox(height: 24),
-                      _buildScheduleSection(),
+                      _buildScheduleSection(context),
                       const SizedBox(height: 24),
-                      _buildCoordinatorsSection(),
+                      _buildCoordinatorsSection(context),
                     ],
                   ),
                 ),
@@ -111,21 +126,24 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  Widget _buildInfoCard({
+  Widget _buildInfoCard(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String content,
     String? subtitle,
   }) {
+    final theme = Theme.of(context);
+    
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: theme.cardTheme.elevation,
+      shape: theme.cardTheme.shape,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.purple.shade400),
+            Icon(icon, color: theme.colorScheme.primary),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -133,24 +151,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: theme.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     content,
-                    style: const TextStyle(fontSize: 15),
+                    style: theme.textTheme.bodyLarge,
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: theme.textTheme.bodyMedium,
                     ),
                   ],
                 ],
@@ -162,25 +174,26 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  Widget _buildScheduleSection() {
+  Widget _buildScheduleSection(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Schedule',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: theme.textTheme.headlineMedium,
         ),
         const SizedBox(height: 12),
         if (schedules.isEmpty)
           Card(
+            elevation: theme.cardTheme.elevation,
+            shape: theme.cardTheme.shape,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
                 'No schedule available',
-                style: TextStyle(color: Colors.grey[600]),
+                style: theme.textTheme.bodyMedium,
               ),
             ),
           )
@@ -192,11 +205,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             itemBuilder: (context, index) {
               final schedule = schedules[index];
               return Card(
+                elevation: theme.cardTheme.elevation,
+                shape: theme.cardTheme.shape,
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: const Icon(Icons.access_time),
-                  title: Text(schedule['activity']),
-                  subtitle: Text(schedule['time']),
+                  leading: Icon(Icons.access_time, color: theme.colorScheme.primary),
+                  title: Text(schedule['activity'], style: theme.textTheme.titleLarge),
+                  subtitle: Text(schedule['time'], style: theme.textTheme.bodyMedium),
                 ),
               );
             },
@@ -205,25 +220,26 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  Widget _buildCoordinatorsSection() {
+  Widget _buildCoordinatorsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Event Coordinators',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: theme.textTheme.headlineMedium,
         ),
         const SizedBox(height: 12),
         if (coordinators.isEmpty)
           Card(
+            elevation: theme.cardTheme.elevation,
+            shape: theme.cardTheme.shape,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
                 'No coordinators assigned',
-                style: TextStyle(color: Colors.grey[600]),
+                style: theme.textTheme.bodyMedium,
               ),
             ),
           )
@@ -235,21 +251,32 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             itemBuilder: (context, index) {
               final coordinator = coordinators[index];
               return Card(
+                elevation: theme.cardTheme.elevation,
+                shape: theme.cardTheme.shape,
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: CircleAvatar(
                     child: Text(
                       coordinator['name'][0].toUpperCase(),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
-                    backgroundColor: Colors.purple.shade400,
+                    backgroundColor: theme.colorScheme.primary,
                   ),
-                  title: Text(coordinator['name']),
+                  title: Text(
+                    coordinator['name'],
+                    style: theme.textTheme.titleLarge,
+                  ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(coordinator['role']),
-                      Text(coordinator['email']),
+                      Text(
+                        coordinator['role'],
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      Text(
+                        coordinator['email'],
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ],
                   ),
                   isThreeLine: true,

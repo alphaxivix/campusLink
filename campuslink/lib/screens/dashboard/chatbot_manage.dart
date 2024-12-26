@@ -1,13 +1,10 @@
-// chatbot_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatbotManagementScreen extends StatefulWidget {
   final String adminId;
-  
 
   const ChatbotManagementScreen({
     Key? key,
@@ -24,16 +21,11 @@ class _ChatbotManagementScreenState extends State<ChatbotManagementScreen> {
   bool _isLoading = false;
   String institution = '';
 
-Future<void> loadUserData() async {
-  final prefs = await SharedPreferences.getInstance();
-  // Safely handle the case where 'institution' might not be stored in SharedPreferences
-  institution = prefs.getString('institution') ?? '';
-  
-  // Optionally print to debug
-  print('Institution loaded: $institution');
-}
-
-
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    institution = prefs.getString('institution') ?? '';
+    print('Institution loaded: $institution');
+  }
 
   @override
   void initState() {
@@ -145,71 +137,82 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Answer for: ${question.questionText}'),
-        content: Form(
-          key: formKey,
+      builder: (context) => Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: answerController,
-                decoration: InputDecoration(
-                  labelText: 'Your Answer',
-                  hintText: 'Enter your specific answer'
+              Text(
+                'Answer Question',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                question.questionText,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 24),
+              Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: answerController,
+                  decoration: const InputDecoration(
+                    labelText: 'Your Answer',
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 4,
+                  validator: (value) =>
+                      value?.isEmpty == true ? 'Please enter an answer' : null,
                 ),
-                maxLines: 3,
-                validator: (value) => 
-                  value?.isEmpty == true ? 'Please enter an answer' : null,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (formKey.currentState!.validate()) {
+                        final updatedAnswer = AdminAnswer(
+                          id: existingAnswer.id,
+                          questionId: question.id,
+                          answer: answerController.text,
+                          active: true,
+                        );
+                        saveAdminAnswer(updatedAnswer);
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final updatedAnswer = AdminAnswer(
-                  id: existingAnswer.id,
-                  questionId: question.id,
-                  answer: answerController.text,
-                  active: true,
-                );
-                saveAdminAnswer(updatedAnswer);
-                Navigator.pop(context);
-              }
-            },
-            child: Text('Save'),
-          ),
-        ],
       ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red)
-    );
-  }
-
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green)
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chatbot Management'),
+        title: Text(
+          'Chatbot Management',
+          style: theme.textTheme.titleLarge,
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: theme.colorScheme.primary),
             onPressed: () {
               fetchPredefinedQuestions();
               fetchAdminAnswers();
@@ -218,8 +221,13 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            )
           : ListView.builder(
+              padding: const EdgeInsets.all(16),
               itemCount: predefinedQuestions.length,
               itemBuilder: (context, index) {
                 final question = predefinedQuestions[index];
@@ -234,46 +242,86 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
                 );
 
                 return Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    title: Text(
-                      question.questionText,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Category: ${question.category}'),
-                        if (answer.answer.isNotEmpty)
-                          Text(
-                            'Your Answer: ${answer.answer}',
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Switch(
-                          value: answer.active,
-                          onChanged: (value) {
-                            final updatedAnswer = AdminAnswer(
-                              id: answer.id,
-                              questionId: question.id,
-                              answer: answer.answer,
-                              active: value,
-                            );
-                            saveAdminAnswer(updatedAnswer);
-                          },
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                question.questionText,
+                                style: theme.textTheme.titleMedium,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                question.category,
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: Icon(
-                            answer.answer.isEmpty 
-                              ? Icons.add_circle 
-                              : Icons.edit,
-                            color: Colors.blue,
+                        if (answer.answer.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceVariant,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              answer.answer,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
-                          onPressed: () => _showAnswerDialog(question),
+                        ],
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Active',
+                                  style: theme.textTheme.labelLarge,
+                                ),
+                                const SizedBox(width: 8),
+                                Switch(
+                                  value: answer.active,
+                                  onChanged: (value) {
+                                    final updatedAnswer = AdminAnswer(
+                                      id: answer.id,
+                                      questionId: question.id,
+                                      answer: answer.answer,
+                                      active: value,
+                                    );
+                                    saveAdminAnswer(updatedAnswer);
+                                  },
+                                ),
+                              ],
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () => _showAnswerDialog(question),
+                              label: Text(
+                                answer.answer.isEmpty ? 'Add Answer' : 'Edit',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -281,6 +329,24 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
                 );
               },
             ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.onError,
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF4CAF50), 
+      ),
     );
   }
 }
