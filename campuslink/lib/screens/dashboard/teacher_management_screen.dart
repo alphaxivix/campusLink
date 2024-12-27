@@ -17,7 +17,6 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch teachers when the screen loads
     final dataProvider = Provider.of<DataProvider>(context, listen: false);
     dataProvider.loadUserData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -27,11 +26,16 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 39, 46, 58),
-        title: const Text('Manage Teachers', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          'Manage Teachers',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
       body: Consumer<DataProvider>(
         builder: (context, dataProvider, child) {
@@ -42,50 +46,44 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                 children: [
                   Text(
                     'Error: ${dataProvider.error}',
-                    style: TextStyle(color: Colors.red),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 16),
-                  ElevatedButton(
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
                     onPressed: () => dataProvider.fetchTeachers(),
-                    child: Text('Retry'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
                   ),
                 ],
               ),
             );
           }
 
-          // if (dataProvider.teachers.isEmpty) {
-          //   return Center(child: CircularProgressIndicator());
-          // }
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: dataProvider.teachers.length,
-                  itemBuilder: (context, index) {
-                    final teacher = dataProvider.teachers[index];
-                    return TeacherCard(
-                      teacher: teacher,
-                      userType: widget.userType,
-                    );
-                  },
-                ),
-              ),
-            ],
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: dataProvider.teachers.length,
+            itemBuilder: (context, index) {
+              final teacher = dataProvider.teachers[index];
+              return TeacherCard(
+                teacher: teacher,
+                userType: widget.userType,
+              );
+            },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddTeacherDialog(context),
-        backgroundColor: Colors.green,
         child: const Icon(Icons.add),
       ),
     );
   }
 
   void _showAddTeacherDialog(BuildContext context) {
+    final theme = Theme.of(context);
     final nameController = TextEditingController();
     final usernameController = TextEditingController();
     final passwordController = TextEditingController();
@@ -98,43 +96,58 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add New Teacher'),
+        title: Text('Add New Teacher', style: theme.textTheme.headlineSmall),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: 'Full Name'),
+                decoration: const InputDecoration(labelText: 'Full Name'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: usernameController,
-                decoration: InputDecoration(labelText: 'Username'),
+                decoration: const InputDecoration(labelText: 'Username'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: subjectController,
-                decoration: InputDecoration(labelText: 'Subject'),
+                decoration: const InputDecoration(labelText: 'Subject'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: qualificationController,
-                decoration: InputDecoration(labelText: 'Qualification'),
+                decoration: const InputDecoration(labelText: 'Qualification'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: experienceController,
-                decoration: InputDecoration(labelText: 'Experience (Years)'),
+                decoration: const InputDecoration(labelText: 'Experience (Years)'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: contactController,
-                decoration: InputDecoration(labelText: 'Contact'),
+                decoration: const InputDecoration(labelText: 'Contact'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: 'Email'),
+                style: theme.textTheme.bodyLarge,
               ),
             ],
           ),
@@ -176,41 +189,47 @@ class TeacherCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 16),
       child: ExpansionTile(
-        title: Text(teacher.name),
-        subtitle: Text('Subject: ${teacher.subject} | Username: ${teacher.username}'),
+        title: Text(
+          teacher.name,
+          style: theme.textTheme.titleMedium,
+        ),
+        subtitle: Text(
+          'Subject: ${teacher.subject} | Username: ${teacher.username}',
+          style: theme.textTheme.bodyMedium,
+        ),
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoRow('Username', teacher.username),
-                _buildInfoRow('Subject', teacher.subject),
-                _buildInfoRow('Qualification', teacher.qualification),
-                _buildInfoRow('Experience', teacher.experience),
-                _buildInfoRow('Contact', teacher.contact),
-                _buildInfoRow('Email', teacher.email),
+                _buildInfoRow(context, 'Username', teacher.username),
+                _buildInfoRow(context, 'Subject', teacher.subject),
+                _buildInfoRow(context, 'Qualification', teacher.qualification),
+                _buildInfoRow(context, 'Experience', teacher.experience),
+                _buildInfoRow(context, 'Contact', teacher.contact),
+                _buildInfoRow(context, 'Email', teacher.email),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    ElevatedButton.icon(
+                    OutlinedButton.icon(
                       onPressed: () => _showEditDialog(context),
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                      ),
+                      icon: Icon(Icons.edit, color: theme.colorScheme.primary),
+                      label: Text('Edit', style: TextStyle(color: theme.colorScheme.primary)),
                     ),
                     ElevatedButton.icon(
                       onPressed: () => _showDeleteDialog(context),
                       icon: const Icon(Icons.delete),
                       label: const Text('Delete'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: theme.colorScheme.error,
+                        foregroundColor: theme.colorScheme.onError,
                       ),
                     ),
                   ],
@@ -223,19 +242,35 @@ class TeacherCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
         ],
       ),
     );
   }
 
   void _showEditDialog(BuildContext context) {
+    final theme = Theme.of(context);
     final nameController = TextEditingController(text: teacher.name);
     final usernameController = TextEditingController(text: teacher.username);
     final passwordController = TextEditingController(text: teacher.password);
@@ -248,43 +283,58 @@ class TeacherCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Teacher'),
+        title: Text('Edit Teacher', style: theme.textTheme.headlineSmall),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: 'Full Name'),
+                decoration: const InputDecoration(labelText: 'Full Name'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: usernameController,
-                decoration: InputDecoration(labelText: 'Username'),
+                decoration: const InputDecoration(labelText: 'Username'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: subjectController,
-                decoration: InputDecoration(labelText: 'Subject'),
+                decoration: const InputDecoration(labelText: 'Subject'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: qualificationController,
-                decoration: InputDecoration(labelText: 'Qualification'),
+                decoration: const InputDecoration(labelText: 'Qualification'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: experienceController,
-                decoration: InputDecoration(labelText: 'Experience (Years)'),
+                decoration: const InputDecoration(labelText: 'Experience (Years)'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: contactController,
-                decoration: InputDecoration(labelText: 'Contact'),
+                decoration: const InputDecoration(labelText: 'Contact'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: 'Email'),
+                style: theme.textTheme.bodyLarge,
               ),
             ],
           ),
@@ -317,11 +367,19 @@ class TeacherCard extends StatelessWidget {
   }
 
   void _showDeleteDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Teacher'),
-        content: Text('Are you sure you want to delete ${teacher.name}?'),
+        title: Text(
+          'Delete Teacher',
+          style: theme.textTheme.headlineSmall,
+        ),
+        content: Text(
+          'Are you sure you want to delete ${teacher.name}?',
+          style: theme.textTheme.bodyLarge,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -333,7 +391,8 @@ class TeacherCard extends StatelessWidget {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
             ),
             child: const Text('Delete'),
           ),

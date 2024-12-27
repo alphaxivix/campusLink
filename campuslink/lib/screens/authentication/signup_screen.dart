@@ -3,9 +3,8 @@ import 'package:campuslink/data/save_user_data.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import 'package:provider/provider.dart';
-  
+
 class SignupScreen extends StatefulWidget {
   final String userType;
   const SignupScreen({Key? key, required this.userType}) : super(key: key);
@@ -24,52 +23,60 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
+  bool _isLoading = false;
 
+  Future<void> _registerUser() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-Future<void> _registerUser() async {
-  final url = Uri.parse('http://192.168.1.78/signup.php');
-  try {
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user_id': _nameController.text,
-        'institution': _institutionController.text,
-        'email': _emailController.text,
-        'password': _passwordController.text,
-        'user_type': widget.userType,
-      }),
-    );
-
-    final responseData = jsonDecode(response.body);
-
-    if (response.statusCode == 200 && responseData['success']) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/main',
-        (route) => false, // Removes all previous routes
-        arguments: {
-          'userType': responseData['user_type'],
-          'userId': responseData['user_id'],
-        },
+    final url = Uri.parse('http://192.168.1.78/signup.php');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': _nameController.text,
+          'institution': _institutionController.text,
+          'email': _emailController.text,
+          'password': _passwordController.text,
+          'user_type': widget.userType,
+        }),
       );
 
-      final dataProvider = Provider.of<DataProvider>(context, listen: false);
-      dataProvider.currentInstitution = responseData['institution'];
+      final responseData = jsonDecode(response.body);
 
-      saveUserData(responseData['institution']);
-    } else {
+      if (response.statusCode == 200 && responseData['success']) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/main',
+          (route) => false,
+          arguments: {
+            'userType': responseData['user_type'],
+            'userId': responseData['user_id'],
+          },
+        );
+
+        final dataProvider = Provider.of<DataProvider>(context, listen: false);
+        dataProvider.currentInstitution = responseData['institution'];
+
+        await saveUserData(responseData['institution']);
+      } else {
+        setState(() {
+          _errorMessage = responseData['message'] ?? 'An error occurred';
+        });
+      }
+    } catch (e) {
       setState(() {
-        _errorMessage = responseData['message'] ?? 'An error occurred';
+        _errorMessage = 'Error occurred: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
-  } catch (e) {
-    setState(() {
-      _errorMessage = 'Error occurred: $e';
-    });
   }
-}
-
 
   @override
   void dispose() {
@@ -81,11 +88,11 @@ Future<void> _registerUser() async {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -95,30 +102,25 @@ Future<void> _registerUser() async {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                  icon: Icon(Icons.arrow_back_ios_rounded),
                   onPressed: () => Navigator.pop(context),
                 ),
                 const SizedBox(height: 32),
-                const Text(
+                Text(
                   'Create Account',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: theme.textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Join CampusLink today',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onBackground.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 48),
                 _buildTextField(
                   controller: _nameController,
-                  label: 'username',
+                  label: 'Username',
                   icon: Icons.person_rounded,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -195,32 +197,32 @@ Future<void> _registerUser() async {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: _isLoading ? null : () {
                       if (_formKey.currentState!.validate()) {
                         _registerUser();
                       }
                     },
-
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          )
+                        : const Text('Sign Up'),
                   ),
                 ),
-                 if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
                     ),
-                  ],
+                  ),
+                ],
                 const SizedBox(height: 24),
               ],
             ),
@@ -242,26 +244,17 @@ Future<void> _registerUser() async {
     return TextFormField(
       controller: controller,
       obscureText: obscureText ?? false,
-      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: Icon(icon, color: Colors.grey),
+        prefixIcon: Icon(icon),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   obscureText! ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
                 ),
                 onPressed: onToggleVisibility,
               )
             : null,
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.grey[900],
       ),
       validator: validator,
     );

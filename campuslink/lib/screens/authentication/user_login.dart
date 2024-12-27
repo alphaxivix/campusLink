@@ -17,7 +17,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _institutionController = TextEditingController();  // New controller
+  final _institutionController = TextEditingController();
   bool _obscurePassword = true;
   String? _errorMessage;
   bool _isLoading = false;
@@ -39,29 +39,24 @@ class _LoginScreenState extends State<LoginScreen> {
         throw 'Please enter a username';
       }
 
-      // Check institution for non-guest users
       if (!_isGuestLogin && institution.isEmpty) {
         throw 'Please enter your institution';
       }
 
-      // For non-guest users, verify password
       if (!_isGuestLogin && _passwordController.text.isEmpty) {
         throw 'Please enter a password';
       }
 
-      // Prepare request body
       Map<String, dynamic> requestBody = {
         'username': username,
         'userType': widget.userType.toLowerCase(),
       };
 
-      // Add password and institution for non-guest users
       if (!_isGuestLogin) {
         requestBody['password'] = _passwordController.text;
         requestBody['institution'] = institution;
       }
 
-      // Make API call
       final response = await http.post(
         Uri.parse('http://192.168.1.78/login.php'),
         headers: {'Content-Type': 'application/json'},
@@ -80,13 +75,13 @@ class _LoginScreenState extends State<LoginScreen> {
         final dataProvider = Provider.of<DataProvider>(context, listen: false);
         dataProvider.currentInstitution = data['user']['institution']?.toString() ?? '';
 
-        saveUserData(data['user']['institution']?.toString() ?? '');
+        await saveUserData(data['user']['institution']?.toString() ?? '');
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
         await prefs.setString('userId', userId);
         await prefs.setString('userType', userType);
-        await prefs.setString('institution', institution);  // Save institution
+        await prefs.setString('institution', institution);
 
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/main',
@@ -94,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
           arguments: {
             'userType': userType,
             'userId': userId,
-            'institution': institution,  // Pass institution to main screen
+            'institution': institution,
           },
         );
       } else {
@@ -118,8 +113,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -128,24 +124,19 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                  icon: Icon(Icons.arrow_back_ios_rounded),
                   onPressed: () => Navigator.pop(context),
                 ),
                 const SizedBox(height: 32),
                 Text(
                   '${widget.userType} Login',
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: theme.textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Welcome back to CampusLink',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[400],
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onBackground.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 48),
@@ -177,9 +168,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   Text(
                     _errorMessage!,
-                    style: TextStyle(
-                      color: Colors.red[300],
-                      fontSize: 14,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
                     ),
                   ),
                 ],
@@ -191,60 +181,49 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () {
                         // Implement forgot password functionality
                       },
-                      child: const Text(
-                        'Forgot Password?',
-                        style: TextStyle(color: Colors.blue),
-                      ),
+                      child: Text('Forgot Password?'),
                     ),
                   ),
-                  
                 ],
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _validateAndLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          )
                         : Text(
                             _isGuestLogin ? 'Continue as Guest' : 'Login',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
                           ),
                   ),
                 ),
+                if (_isAdminLogin) ...[
                   const SizedBox(height: 24),
-                 if (_isAdminLogin)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         "Don't have an account? ",
-                        style: TextStyle(color: Colors.grey[400]),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onBackground.withOpacity(0.7),
+                        ),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.pushNamed(context, '/adminSignup');
                         },
-                        child: const Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: Text('Sign Up'),
                       ),
                     ],
                   ),
+                ],
               ],
             ),
           ),
@@ -254,43 +233,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildTextField({
-  required TextEditingController controller,
-  required String label,
-  required IconData icon,
-  bool isPassword = false,
-  bool? obscureText,
-  VoidCallback? onToggleVisibility,
-}) {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.grey[900],
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: TextField(
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+    bool? obscureText,
+    VoidCallback? onToggleVisibility,
+  }) {
+    return TextField(
       controller: controller,
       obscureText: obscureText ?? false,
-      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey[400]),
-        prefixIcon: Icon(icon, color: Colors.grey[400]),
+        prefixIcon: Icon(icon),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   obscureText! ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey[400],
                 ),
                 onPressed: onToggleVisibility,
               )
             : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.grey[900],
       ),
-    ),
-  );
-}
+    );
+  }
 }

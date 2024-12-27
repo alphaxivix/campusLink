@@ -17,7 +17,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch students when screen loads
     final dataProvider = Provider.of<DataProvider>(context, listen: false);
     dataProvider.loadUserData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -25,13 +24,18 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     });
   }
 
-   @override
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 39, 46, 58),
-        title: const Text('Manage Students', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          'Manage Students',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
       body: Consumer<DataProvider>(
         builder: (context, dataProvider, child) {
@@ -42,53 +46,46 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                 children: [
                   Text(
                     'Error: ${dataProvider.error}',
-                    style: TextStyle(color: Colors.red),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 16),
-                  ElevatedButton(
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
                     onPressed: () => dataProvider.fetchStudents(),
-                    child: Text('Retry'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
                   ),
                 ],
               ),
             );
           }
 
-          // if (dataProvider.students.isEmpty) {
-          //   return Center(child: CircularProgressIndicator());
-          // }
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: dataProvider.students.length,
-                  itemBuilder: (context, index) {
-                    final student = dataProvider.students[index];
-                    return StudentCard(
-                      student: student,
-                      userType: widget.userType,
-                    );
-                  },
-                ),
-              ),
-            ],
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: dataProvider.students.length,
+            itemBuilder: (context, index) {
+              final student = dataProvider.students[index];
+              return StudentCard(
+                student: student,
+                userType: widget.userType,
+              );
+            },
           );
         },
       ),
       floatingActionButton: widget.userType == 'Admin'
           ? FloatingActionButton(
               onPressed: () => _showAddStudentDialog(context),
-              backgroundColor: Colors.blue,
               child: const Icon(Icons.add),
             )
           : null,
     );
   }
 
-
   void _showAddStudentDialog(BuildContext context) {
+    final theme = Theme.of(context);
     final nameController = TextEditingController();
     final usernameController = TextEditingController();
     final passwordController = TextEditingController();
@@ -100,39 +97,52 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add New Student'),
+        title: Text('Add New Student', style: theme.textTheme.headlineSmall),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: 'Full Name'),
+                decoration: const InputDecoration(labelText: 'Full Name'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: usernameController,
-                decoration: InputDecoration(labelText: 'Username'),
+                decoration: const InputDecoration(labelText: 'Username'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: gradeController,
-                decoration: InputDecoration(labelText: 'Grade/Year'),
+                decoration: const InputDecoration(labelText: 'Grade/Year'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: sectionController,
-                decoration: InputDecoration(labelText: 'Section'),
+                decoration: const InputDecoration(labelText: 'Section'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: contactController,
-                decoration: InputDecoration(labelText: 'Contact'),
+                decoration: const InputDecoration(labelText: 'Contact'),
+                style: theme.textTheme.bodyLarge,
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: 'Email'),
+                style: theme.textTheme.bodyLarge,
               ),
             ],
           ),
@@ -173,41 +183,47 @@ class StudentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 16),
       child: ExpansionTile(
-        title: Text(student.name),
-        subtitle: Text('Grade: ${student.grade} | Username: ${student.username}'),
+        title: Text(
+          student.name,
+          style: theme.textTheme.titleMedium,
+        ),
+        subtitle: Text(
+          'Grade: ${student.grade} | Username: ${student.username}',
+          style: theme.textTheme.bodyMedium,
+        ),
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoRow('Username', student.username),
-                _buildInfoRow('Grade/Year', student.grade),
-                _buildInfoRow("Password", student.password),
-                _buildInfoRow('Section', student.section),
-                _buildInfoRow('Contact', student.contact),
-                _buildInfoRow('Email', student.email),
+                _buildInfoRow(context, 'Username', student.username),
+                _buildInfoRow(context, 'Grade/Year', student.grade),
+                _buildInfoRow(context, 'Password', student.password),
+                _buildInfoRow(context, 'Section', student.section),
+                _buildInfoRow(context, 'Contact', student.contact),
+                _buildInfoRow(context, 'Email', student.email),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    ElevatedButton.icon(
+                    OutlinedButton.icon(
                       onPressed: () => _showEditDialog(context),
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                      ),
+                      icon: Icon(Icons.edit, color: theme.colorScheme.primary),
+                      label: Text('Edit', style: TextStyle(color: theme.colorScheme.primary)),
                     ),
                     ElevatedButton.icon(
                       onPressed: () => _showDeleteDialog(context),
                       icon: const Icon(Icons.delete),
                       label: const Text('Delete'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: theme.colorScheme.error,
+                        foregroundColor: theme.colorScheme.onError,
                       ),
                     ),
                   ],
@@ -220,13 +236,28 @@ class StudentCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
         ],
       ),
     );
@@ -308,11 +339,19 @@ class StudentCard extends StatelessWidget {
   }
 
   void _showDeleteDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Student'),
-        content: Text('Are you sure you want to delete ${student.name}?'),
+        title: Text(
+          'Delete Student',
+          style: theme.textTheme.headlineSmall,
+        ),
+        content: Text(
+          'Are you sure you want to delete ${student.name}?',
+          style: theme.textTheme.bodyLarge,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -324,7 +363,8 @@ class StudentCard extends StatelessWidget {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
             ),
             child: const Text('Delete'),
           ),

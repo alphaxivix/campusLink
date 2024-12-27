@@ -1,10 +1,15 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -27,23 +32,21 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'CampusLink',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: isDark ? Colors.white : Colors.black,
                       letterSpacing: 0.5,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 48),
-              const Text(
+              Text(
                 'Choose your role',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: Colors.grey,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: isDark ? Colors.grey : Colors.grey[700],
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -55,32 +58,28 @@ class HomeScreen extends StatelessWidget {
                   crossAxisSpacing: 16,
                   children: [
                     _buildRoleCard(
-                      context,
-                      'Admin',
-                      Icons.admin_panel_settings_rounded,
-                      Colors.purple,
-                      () => Navigator.pushNamed(context, '/adminLogin'),
+                      context: context,
+                      title: 'Admin',
+                      icon: Icons.admin_panel_settings_rounded,
+                      color: Colors.purple,
                     ),
                     _buildRoleCard(
-                      context,
-                      'Teacher',
-                      Icons.person_rounded,
-                      Colors.green,
-                      () => Navigator.pushNamed(context, '/teacherLogin'),
+                      context: context,
+                      title: 'Teacher',
+                      icon: Icons.person_rounded,
+                      color: Colors.green,
                     ),
                     _buildRoleCard(
-                      context,
-                      'Student',
-                      Icons.school_rounded,
-                      Colors.orange,
-                      () => Navigator.pushNamed(context, '/studentLogin'),
+                      context: context,
+                      title: 'Student',
+                      icon: Icons.school_rounded,
+                      color: Colors.orange,
                     ),
                     _buildRoleCard(
-                      context,
-                      'Guest',
-                      Icons.person_outline_rounded,
-                      Colors.blue,
-                      () => Navigator.pushNamed(context, '/guestLogin'),
+                      context: context,
+                      title: 'Guest',
+                      icon: Icons.person_outline_rounded,
+                      color: Colors.blue,
                     ),
                   ],
                 ),
@@ -92,14 +91,24 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRoleCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildRoleCard({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundColor = isDark ? color.withOpacity(0.1) : color.withOpacity(0.05);
+    final borderColor = isDark ? color.withOpacity(0.2) : color.withOpacity(0.1);
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => Navigator.pushNamed(context, '/${title.toLowerCase()}Login'),
       child: Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2), width: 2),
+          border: Border.all(color: borderColor, width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -108,10 +117,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleMedium?.copyWith(
                 color: color,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -120,4 +128,3 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-
