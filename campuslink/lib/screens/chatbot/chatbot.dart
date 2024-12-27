@@ -3,7 +3,6 @@ import 'package:flutter/scheduler.dart';
 import '../../widgets/profile.dart';
 import '../chatbot/rasa_service.dart';
 
-
 class Chatbot extends StatefulWidget {
   @override
   _ChatbotState createState() => _ChatbotState();
@@ -16,16 +15,13 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   bool _isEmojiPickerVisible = false;
   
-  // Animated Welcome Message
   String _welcomeText = '';
   final String _fullWelcomeText = 'Welcome to Campus Master';
   late AnimationController _animationController;
   
-  // Chat history variables
   List<Map<String, dynamic>> _chatHistory = [];
   int _currentChatIndex = -1;
 
-  // Emoji List
   final List<String> _emojis = [
     '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', 
     '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', 
@@ -34,7 +30,6 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
     '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮'
   ];
 
-  // Predefined Responses
   final Map<String, String> _predefinedResponses = {
     'hi': 'Hello! How can I assist you today?',
     'hello': 'Hi there! Welcome to Campus Master. How can I help you?',
@@ -47,8 +42,6 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    
-    // Animation Controller for Welcome Text
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -57,8 +50,6 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
           _welcomeText = _fullWelcomeText.substring(0, (_fullWelcomeText.length * _animationController.value).round());
         });
       });
-    
-    // Start the animation
     _animationController.forward();
   }
 
@@ -68,6 +59,7 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  // Rest of the methods remain the same...
   void _sendMessage() async {
     String message = _controller.text.trim().toLowerCase();
     if (message.isNotEmpty) {
@@ -87,7 +79,6 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
       _scrollToBottom();
 
       try {
-        // Check for predefined responses first
         if (_predefinedResponses.containsKey(message)) {
           _addBotMessage(_predefinedResponses[message]!);
           return;
@@ -151,37 +142,37 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Color.fromARGB(255, 39, 46, 58)),
+            DrawerHeader(
+              decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
               child: Center(
                 child: Text(
                   "Guest Menu",
-                  style: TextStyle(
-                    fontSize: 22,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.primary,
                   ),
                 ),
               ),
             ),
-            // Chat History as an Expansion Tile within the main drawer
             ExpansionTile(
-              leading: Icon(Icons.history),
-              title: Text('Chat History'),
+              leading: Icon(Icons.history, color: theme.colorScheme.onBackground),
+              title: Text('Chat History', style: theme.textTheme.titleMedium),
               children: [
                 _chatHistory.isEmpty
                     ? Center(
                         child: Text(
                           'No previous chats',
-                          style: TextStyle(color: Colors.grey),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
                         ),
                       )
                     : ListView.builder(
@@ -192,23 +183,23 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
                           return ListTile(
                             title: Text(
                               _chatHistory[index]['title'],
-                              style: TextStyle(
+                              style: theme.textTheme.bodyLarge?.copyWith(
                                 color: _currentChatIndex == index
-                                    ? Colors.blue
-                                    : Colors.black,
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurface,
                               ),
                             ),
                             onTap: () => _loadChat(index),
                             trailing: IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
+                              icon: Icon(Icons.delete, color: theme.colorScheme.error),
                               onPressed: () => _deleteChat(index),
                             ),
                           );
                         },
                       ),
                 ListTile(
-                  leading: Icon(Icons.add),
-                  title: Text('Start New Chat'),
+                  leading: Icon(Icons.add, color: theme.colorScheme.onBackground),
+                  title: Text('Start New Chat', style: theme.textTheme.bodyLarge),
                   onTap: _startNewChat,
                 ),
               ],
@@ -217,17 +208,16 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
         ),
       ),
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 39, 46, 58),
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: Colors.white),
+            icon: Icon(Icons.menu),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: Text('Chatbot', style: TextStyle(color: Colors.white)),
+        title: Text('Chatbot'),
         actions: [
           IconButton(
-            icon: Icon(Icons.account_circle, color: Colors.white),
+            icon: Icon(Icons.account_circle),
             onPressed: () {
               Navigator.push(
                 context,
@@ -238,7 +228,7 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
         ],
       ),
       body: Container(
-        color: Colors.white,
+        color: theme.colorScheme.background,
         child: Column(
           children: [
             Expanded(
@@ -247,11 +237,7 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
                   : Center(
                       child: Text(
                         _welcomeText,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
-                        ),
+                        style: theme.textTheme.headlineMedium,
                       ),
                     ),
             ),
@@ -272,8 +258,8 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
                       children: [
                         if (!isUserMessage)
                           CircleAvatar(
-                            backgroundColor: Colors.blue.shade100,
-                            child: Icon(Icons.smart_toy, color: Colors.blue.shade700),
+                            backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                            child: Icon(Icons.smart_toy, color: theme.colorScheme.primary),
                           ),
                         SizedBox(width: 8),
                         Flexible(
@@ -284,31 +270,22 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
                             children: [
                               Text(
                                 isUserMessage ? 'You' : 'Campus_Master',
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 12,
-                                ),
+                                style: theme.textTheme.bodySmall,
                               ),
                               Container(
                                 padding: EdgeInsets.all(10),
                                 constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.7,
+                                  maxWidth: MediaQuery.of(context).size.width * 0.7,
                                 ),
                                 decoration: BoxDecoration(
                                   color: isUserMessage
-                                      ? Colors.blue.shade100
-                                      : Colors.grey.shade200,
+                                      ? theme.colorScheme.primary.withOpacity(0.2)
+                                      : theme.colorScheme.surface,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   _messages[index].substring(4),
-                                  style: TextStyle(
-                                    color: Colors.grey[800],
-                                  ),
-                                  softWrap: true,
-                                  maxLines: null,
-                                  overflow: TextOverflow.visible,
+                                  style: theme.textTheme.bodyMedium,
                                 ),
                               ),
                             ],
@@ -318,8 +295,8 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
                           SizedBox(width: 8),
                         if (isUserMessage)
                           CircleAvatar(
-                            backgroundColor: Colors.blue.shade100,
-                            child: Icon(Icons.person, color: Color.fromARGB(255, 52, 93, 138)),
+                            backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                            child: Icon(Icons.person, color: theme.colorScheme.primary),
                           ),
                       ],
                     ),
@@ -330,7 +307,7 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
             if (_isEmojiPickerVisible)
               Container(
                 height: 250,
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 child: GridView.builder(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 5,
@@ -360,32 +337,35 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Input Field
                   TextField(
                     controller: _controller,
-                    cursorColor: Colors.blue.shade700,
+                    cursorColor: theme.colorScheme.primary,
                     textAlignVertical: TextAlignVertical.center,
-                    style: TextStyle(color: Colors.grey[800]),
+                    style: theme.textTheme.bodyLarge,
                     decoration: InputDecoration(
                       hintText: 'Chat with Campus Master...',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
                       filled: true,
-                      fillColor: Colors.grey.shade100,
+                      fillColor: theme.colorScheme.surface,
                       contentPadding: EdgeInsets.symmetric(
                         vertical: 10.0,
                         horizontal: 50.0,
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30.0),
-                        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.outline,
+                          width: 1,
+                        ),
                       ),
                     ),
                   ),
-                  // Emoji Picker Icon
                   Positioned(
                     left: 10.0,
                     child: IconButton(
-                      icon: Icon(Icons.emoji_emotions, color: const Color.fromARGB(255, 52, 93, 138)),
+                      icon: Icon(Icons.emoji_emotions, color: theme.colorScheme.primary),
                       onPressed: () {
                         setState(() {
                           _isEmojiPickerVisible = !_isEmojiPickerVisible;
@@ -393,11 +373,10 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
                       },
                     ),
                   ),
-                  // Send Button
                   Positioned(
                     right: 10.0,
                     child: IconButton(
-                      icon: Icon(Icons.send, color: const Color.fromARGB(255, 52, 93, 138)),
+                      icon: Icon(Icons.send, color: theme.colorScheme.primary),
                       onPressed: _sendMessage,
                     ),
                   ),

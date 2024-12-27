@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -7,15 +9,46 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  bool _isEditing = false;
+  final TextEditingController _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  String? _profileImagePath;
+  final ImagePicker _picker = ImagePicker();
+
+  // Mock user data
+  Map<String, String> userData = {
+    'name': 'John Doe',
+    'university': 'XYZ University',
+    'password': '••••••••',
+    'email': 'john.doe@example.com',
+    'studentId': 'STU123456',
+  };
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          _profileImagePath = image.path;
+        });
+        // Here you would typically upload the image to your server
+        // and get back a URL to store
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: ${e.toString()}')),
+      );
+    }
+  }
+
   Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Clear all stored data
+      await prefs.clear();
       
-      // Navigate to login page and clear navigation stack
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
-        '/homeScreen', // Changed from '/' to '/login' for better semantics
+        '/homeScreen',
         (route) => false,
       );
     } catch (e) {
@@ -26,25 +59,33 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _toggleEditMode() {
+    setState(() {
+      _isEditing = !_isEditing;
+      if (!_isEditing) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
           'Profile',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.onPrimary,
           ),
         ),
         actions: [
-          // Added logout button in AppBar
           IconButton(
             icon: Icon(Icons.logout),
-            color: Colors.white,
             onPressed: () {
-              // Show confirmation dialog before logout
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
@@ -70,75 +111,78 @@ class _ProfilePageState extends State<ProfilePage> {
             },
           ),
         ],
-        iconTheme: IconThemeData(
-          color: Colors.white,
-        ),
-        backgroundColor: const Color.fromARGB(255, 39, 46, 58),
-        elevation: 0,
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Picture Section
+            // Profile Image Section
             Container(
               margin: EdgeInsets.only(top: 20),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   Container(
+                    width: 150,
+                    height: 150,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Color.fromARGB(255, 39, 46, 58), width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color.fromARGB(255, 39, 46, 58).withOpacity(0.2),
-                          spreadRadius: 2,
-                          blurRadius: 10,
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 65,
-                      backgroundColor: Colors.grey.shade200,
-                      backgroundImage: NetworkImage(
-                        'https://www.example.com/your-profile-picture.jpg',
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      border: Border.all(
+                        color: theme.colorScheme.primary,
+                        width: 3,
                       ),
                     ),
+                    child: ClipOval(
+                      child: _profileImagePath != null
+                          ? Image.file(
+                              File(_profileImagePath!),
+                              fit: BoxFit.cover,
+                            )
+                          : Icon(
+                              Icons.person,
+                              size: 80,
+                              color: theme.colorScheme.primary,
+                            ),
+                    ),
                   ),
+                  if (_isEditing)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.camera_alt,
+                            color: theme.colorScheme.onPrimary,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
             SizedBox(height: 20),
 
             // User Details Section
-            ..._buildDetailCards([
-              {'icon': Icons.person, 'title': 'Name', 'value': 'John Doe'},
-              {'icon': Icons.school, 'title': 'University', 'value': 'XYZ University'},
-            ]),
+            ..._buildDetailCards(theme),
 
-            // Edit Profile Button
+            // Edit/Save Profile Button
             Container(
               margin: EdgeInsets.all(20),
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Edit Profile clicked')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color.fromARGB(255, 39, 46, 58),
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                onPressed: _toggleEditMode,
                 child: Text(
-                  'Edit Profile',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  _isEditing ? 'Save Profile' : 'Edit Profile',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onPrimary,
                   ),
                 ),
               ),
@@ -149,63 +193,99 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  List<Widget> _buildDetailCards(List<Map<String, dynamic>> details) {
+  List<Widget> _buildDetailCards(ThemeData theme) {
+    final List<Map<String, dynamic>> details = [
+      {'icon': Icons.person, 'title': 'Name', 'value': userData['name']!},
+      {'icon': Icons.lock, 'title': 'Password', 'value': userData['password']!, 'isPassword': true},
+      {'icon': Icons.school, 'title': 'University', 'value': userData['university']!},
+      {'icon': Icons.email, 'title': 'Email', 'value': userData['email']!},
+      {'icon': Icons.badge, 'title': 'Student ID', 'value': userData['studentId']!},
+    ];
+
     return details.map((detail) {
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         padding: EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade200,
-              spreadRadius: 2,
-              blurRadius: 10,
-              offset: Offset(0, 4),
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: Offset(0, 2),
             ),
           ],
-          border: Border.all(color: Colors.grey.shade200),
         ),
         child: Row(
           children: [
             Container(
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Color.fromARGB(255, 39, 46, 58).withOpacity(0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 detail['icon'] as IconData,
-                color: Colors.black,
+                color: theme.colorScheme.primary,
                 size: 24,
               ),
             ),
             SizedBox(width: 15),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detail['title'] as String,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    detail['title'] as String,
+                    style: theme.textTheme.bodySmall,
                   ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  detail['value'] as String,
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+                  SizedBox(height: 5),
+                  if (_isEditing && detail['isPassword'] == true)
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                        hintText: 'Enter new password',
+                      ),
+                    )
+                  else if (_isEditing)
+                    TextField(
+                      controller: TextEditingController(text: detail['value'] as String),
+                      decoration: InputDecoration(
+                        hintText: 'Enter ${detail['title']}',
+                      ),
+                    )
+                  else
+                    Text(
+                      detail['value'] as String,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
       );
     }).toList();
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
   }
 }

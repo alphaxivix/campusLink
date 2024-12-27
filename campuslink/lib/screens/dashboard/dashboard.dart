@@ -214,7 +214,7 @@ class _UserDashboardState extends State<UserDashboard> {
               child: Center(
                 child: Text(
                   "${widget.userRole} Menu",
-                  style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.onPrimary),
+                  style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.primary),
                 ),
               ),
             ),
