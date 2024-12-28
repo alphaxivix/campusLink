@@ -5,6 +5,7 @@ import 'package:campuslink/screens/dashboard/chatbot_manage.dart';
 import 'package:campuslink/screens/dashboard/student_management_screen.dart';
 import 'package:campuslink/screens/dashboard/teacher_management_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/profile.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -30,6 +31,7 @@ class UserDashboard extends StatefulWidget {
 
 class _UserDashboardState extends State<UserDashboard> {
   String eventTitle = 'Loading...';
+  String institution = '';
   String? eventDate;
   late StreamSubscription eventUpdateSubscription;
   Map<String, dynamic> upcomingEvent = {};
@@ -38,6 +40,7 @@ class _UserDashboardState extends State<UserDashboard> {
   void initState() {
     super.initState();
     fetchUpcomingEvent();
+     _initializeData();
     eventUpdateSubscription = UserDashboard.eventUpdateController.stream.listen((_) {
       fetchUpcomingEvent();
     });
@@ -49,42 +52,70 @@ class _UserDashboardState extends State<UserDashboard> {
     super.dispose();
   }
 
-  Future<void> fetchUpcomingEvent() async {
-    try {
-      final response = await http.get(Uri.parse('http://192.168.1.78/upcoming_event.php'));
+  Future<void> _initializeData() async {
+  await loadUserData();
+  fetchUpcomingEvent();
+}
 
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          setState(() {
-            eventTitle = 'No upcoming events';
-            eventDate = null;
-            upcomingEvent = {};
-          });
-          return;
-        }
-
-        final data = jsonDecode(response.body);
-        setState(() {
-          upcomingEvent = data;
-          eventTitle = data['title'] ?? 'No title';
-          eventDate = data['event_date'];
-        });
-      } else {
-        setState(() {
-          eventTitle = 'Error loading event';
-          eventDate = null;
-          upcomingEvent = {};
-        });
-      }
-    } catch (e) {
-      setState(() {
-        eventTitle = 'Error loading event';
-        eventDate = null;
-        upcomingEvent = {};
-      });
-      print('Error: $e');
-    }
+Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      institution = prefs.getString('institution') ?? '';
+    });
+    print('Institution loaded: $institution');
   }
+
+  Future<void> fetchUpcomingEvent() async {
+  try {
+    // Get institution from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final institution = prefs.getString('institution');
+
+    if (institution == null || institution.isEmpty) {
+      throw Exception('Institution not found. Please log in again.');
+    }
+
+    final response = await http.get(
+      Uri.parse('http://192.168.1.78/upcoming_event.php?institution=$institution')
+    );
+
+    print('Response status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      
+      if (!responseData['success']) {
+        throw Exception(responseData['message']);
+      }
+
+      final data = responseData['data'];
+      setState(() {
+        upcomingEvent = data;
+        eventTitle = data['title'] ?? 'No upcoming events';
+        eventDate = data['event_date'];
+      });
+    } else {
+      final errorData = json.decode(response.body);
+      throw Exception(errorData['message']);
+    }
+  } catch (e) {
+    setState(() {
+      eventTitle = 'Error loading event';
+      eventDate = null;
+      upcomingEvent = {};
+    });
+    print('Error fetching upcoming event: $e');
+    
+    // Optional: Show error to user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error loading upcoming event: $e'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+  }
+}
 
 
 @override

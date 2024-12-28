@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'event_form.dart';
 import '../../../app_theme.dart';
 
@@ -18,44 +19,85 @@ class _EventListScreenState extends State<EventListScreen> {
   bool isLoading = true;
   final String baseUrl = 'http://192.168.1.78/save_events.php';
 
+  String institution = '';
+
   @override
-  void initState() {
-    super.initState();
-    _loadEvents();
+void initState() {
+  super.initState();
+  _initializeData();
+}
+
+Future<void> _initializeData() async {
+  await loadUserData();
+  _loadEvents();
+}
+
+Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      institution = prefs.getString('institution') ?? '';
+    });
+    print('Institution loaded: $institution');
   }
 
   Future<void> _loadEvents() async {
-    setState(() => isLoading = true);
-    try {
-      final response = await http.get(Uri.parse(baseUrl));
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          setState(() {
-            events = [];
-            isLoading = false;
-          });
-          return;
-        }
-        
-        final List<dynamic> decodedData = json.decode(response.body);
-        decodedData.sort((a, b) => DateTime.parse(a['event_date'])
-            .compareTo(DateTime.parse(b['event_date'])));
-            
+  setState(() => isLoading = true);
+  try {
+    // Get institution from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final institution = prefs.getString('institution');
+
+    if (institution == null || institution.isEmpty) {
+      throw Exception('Institution not found. Please log in again.');
+    }
+
+    // Add institution as query parameter
+    final url = Uri.parse('$baseUrl?institution=$institution');
+    final response = await http.get(url);
+    
+    print('Response status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      
+      if (!responseData['success']) {
+        throw Exception(responseData['message']);
+      }
+      
+      if (responseData['data'] == null) {
         setState(() {
-          events = decodedData;
+          events = [];
           isLoading = false;
         });
-      } else {
-        throw Exception('Failed to load events: ${response.statusCode}');
+        return;
       }
-    } catch (e) {
+      
+      final List<dynamic> decodedData = responseData['data'];
+      decodedData.sort((a, b) => DateTime.parse(a['event_date'])
+          .compareTo(DateTime.parse(b['event_date'])));
+          
       setState(() {
-        events = [];
+        events = decodedData;
         isLoading = false;
       });
-      _showErrorSnackBar('Error loading events: $e');
+    } else {
+      final errorData = json.decode(response.body);
+      throw Exception(
+        'Failed to load events:\n'
+        'Status code: ${response.statusCode}\n'
+        'Message: ${errorData['message']}'
+      );
     }
+  } catch (e) {
+    setState(() {
+      events = [];
+      isLoading = false;
+    });
+    _showErrorSnackBar('Error loading events: $e');
+    print('Error in _loadEvents: $e');
   }
+}
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -88,17 +130,35 @@ class _EventListScreenState extends State<EventListScreen> {
   }
 
   Future<void> _deleteEvent(String id) async {
-    try {
-      final response = await http.delete(Uri.parse('$baseUrl?id=$id'));
-      if (response.statusCode == 200) {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final institution = prefs.getString('institution');
+
+    if (institution == null || institution.isEmpty) {
+      throw Exception('Institution not found. Please log in again.');
+    }
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl?id=$id&institution=$institution')
+    );
+    
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      if (responseData['success']) {
         UserDashboard.eventUpdateController.add(null);
         _loadEvents();
         _showSuccessSnackBar('Event deleted successfully');
+      } else {
+        throw Exception(responseData['message']);
       }
-    } catch (e) {
-      _showErrorSnackBar('Error deleting event: $e');
+    } else {
+      final errorData = json.decode(response.body);
+      throw Exception(errorData['message']);
     }
+  } catch (e) {
+    _showErrorSnackBar('Error deleting event: $e');
   }
+}
 
   String _getEventTimeStatus(String eventDate) {
     final eventDateTime = DateTime.parse(eventDate);

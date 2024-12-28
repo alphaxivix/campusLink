@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EventForm extends StatefulWidget {
   final String? eventId; // Optional - if provided, we're editing an existing event
@@ -34,78 +35,75 @@ class _EventFormState extends State<EventForm> {
   // API URL - Change this to match your XAMPP setup
   final String apiUrl = 'http://192.168.1.78/save_events.php';
 
+  String institution = '';
+
   @override
   void initState() {
-    super.initState();  
+    super.initState();
+    loadUserData();
     if (widget.eventId != null) {
       _loadEventData();
     }
   }
 
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      institution = prefs.getString('institution') ?? '';
+    });
+    print('Institution loaded: $institution');
+  }
+
 Future<void> _loadEventData() async {
-  if (!mounted) return; // Add this check at the start
+  if (!mounted) return;
+  
+  // Wait for institution to be loaded if it's empty
+  if (institution.isEmpty) {
+    await loadUserData();
+  }
   
   try {
-    final url = Uri.parse('$apiUrl?id=${widget.eventId}');
+    final url = Uri.parse('$apiUrl?id=${widget.eventId}&institution=$institution');
     final response = await http.get(url);
     
-    if (!mounted) return; // Add this check after async operations
+    if (!mounted) return;
     
     if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Event not found');
-      }
-      
-      final data = json.decode(response.body);
-      if (data == null) {
-        throw Exception('Invalid event data');
-      }
+      final responseJson = json.decode(response.body);
+      final data = responseJson['data'];
       
       setState(() {
-        // Populate text controllers
         _titleController.text = data['title'] ?? '';
         _descriptionController.text = data['description'] ?? '';
         _locationController.text = data['location'] ?? '';
         _locationDetailController.text = data['location_detail'] ?? '';
         
-        // Parse event date and time
         if (data['event_date'] != null) {
-          try {
-            _selectedDate = DateTime.parse(data['event_date']);
-            _selectedTime = TimeOfDay.fromDateTime(_selectedDate);
-          } catch (e) {
-            print('Error parsing date: $e');
-            // Use default values if date parsing fails
-            _selectedDate = DateTime.now();
-            _selectedTime = TimeOfDay.now();
-          }
+          _selectedDate = DateTime.parse(data['event_date']);
+          _selectedTime = TimeOfDay.fromDateTime(_selectedDate);
         }
         
         // Parse schedule list
         final scheduleList = data['schedule'] as List<dynamic>?;
-        schedule = scheduleList != null
-            ? scheduleList.map((s) => {
-                  'time': s['time']?.toString() ?? '',
-                  'activity': s['activity']?.toString() ?? ''
-              }).toList()
-            : [];
+        schedule = scheduleList?.map((s) => {
+          'time': s['time']?.toString() ?? '',
+          'activity': s['activity']?.toString() ?? ''
+        }).toList() ?? [];
         
         // Parse coordinators list
         final coordinatorsList = data['coordinators'] as List<dynamic>?;
-        coordinators = coordinatorsList != null
-            ? coordinatorsList.map((c) => {
-                  'name': c['name']?.toString() ?? '',
-                  'role': c['role']?.toString() ?? '',
-                  'email': c['email']?.toString() ?? ''
-              }).toList()
-            : [];
+        coordinators = coordinatorsList?.map((c) => {
+          'name': c['name']?.toString() ?? '',
+          'role': c['role']?.toString() ?? '',
+          'email': c['email']?.toString() ?? ''
+        }).toList() ?? [];
       });
     } else {
-      throw Exception('Failed to load event. Status code: ${response.statusCode}');
+      throw Exception('Failed to load event');
     }
   } catch (e) {
     print('Error loading event: $e');
-    if (mounted) { // Add this check before showing SnackBar
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading event: $e')),
       );
@@ -114,8 +112,15 @@ Future<void> _loadEventData() async {
 }
 
 
-  Future<void> _saveEvent() async {
+   Future<void> _saveEvent() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (institution.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: Institution not found')),
+      );
+      return;
+    }
 
     final eventData = {
       'title': _titleController.text,
@@ -126,6 +131,7 @@ Future<void> _loadEventData() async {
       'location_detail': _locationDetailController.text,
       'schedule': schedule,
       'coordinators': coordinators,
+      'institution': institution, // Add institution to the payload
     };
 
     try {
@@ -137,14 +143,16 @@ Future<void> _loadEventData() async {
               body: json.encode(eventData),
             );
 
-      if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200 && responseData['success'] == true) {
         UserDashboard.eventUpdateController.add(null);
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Event ${widget.eventId == null ? 'created' : 'updated'} successfully')),
         );
       } else {
-        throw Exception('Failed to save event');
+        throw Exception(responseData['message'] ?? 'Failed to save event');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
