@@ -28,6 +28,7 @@ import 'package:campuslink/widgets/splash_screen.dart';
     @override
     Widget build(BuildContext context) {
       return MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'CAMPUSLINK',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
