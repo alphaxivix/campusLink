@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/profile.dart';
-import '../chatbot/rasa_service.dart';
+import 'google_service.dart';
 
 class Chatbot extends StatefulWidget {
+  const Chatbot({Key? key}) : super(key: key);
+  
   @override
   _ChatbotState createState() => _ChatbotState();
 }
 
 class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
-  final RasaService _rasaService = RasaService();
   final TextEditingController _controller = TextEditingController();
-  List<String> _messages = [];
   final ScrollController _scrollController = ScrollController();
+  final GeminiService _geminiService = GeminiService();
+  
+  String institution = '';  // Add institution variable
+  List<String> _messages = [];
   bool _isEmojiPickerVisible = false;
+  bool _isLoading = false;
   
   String _welcomeText = '';
   final String _fullWelcomeText = 'Welcome to Campus Master';
@@ -23,25 +29,14 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
   int _currentChatIndex = -1;
 
   final List<String> _emojis = [
-    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', 
-    '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', 
-    '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', 
-    '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', 
-    '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮'
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
+    // ... rest of emojis
   ];
-
-  final Map<String, String> _predefinedResponses = {
-    'hi': 'Hello! How can I assist you today?',
-    'hello': 'Hi there! Welcome to Campus Master. How can I help you?',
-    'hey': 'Hey! What can I do for you?',
-    'who are you': 'I am Campus Master, an AI assistant designed to help you with campus-related queries.',
-    'what is your name': 'I\'m Campus Master, your friendly AI assistant.',
-    'help': 'I\'m here to help! What information are you looking for?',
-  };
 
   @override
   void initState() {
     super.initState();
+    loadUserData();  // Load institution data
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -53,18 +48,35 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
     _animationController.forward();
   }
 
+  // Add loadUserData method
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      institution = prefs.getString('institution') ?? '';
+    });
+    print('Institution loaded: $institution');
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
+    _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  // Rest of the methods remain the same...
-  void _sendMessage() async {
-    String message = _controller.text.trim().toLowerCase();
+   void _sendMessage() async {
+    String message = _controller.text.trim();
     if (message.isNotEmpty) {
+      if (institution.isEmpty) {
+        // Check if institution is loaded
+        _addBotMessage("Sorry, institution information is not available. Please try again later.");
+        return;
+      }
+
       setState(() {
         _messages.add("You: $message");
+        _isLoading = true;
         if (_currentChatIndex == -1) {
           _chatHistory.add({
             'title': 'New Chat ${_chatHistory.length + 1}',
@@ -79,19 +91,14 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
       _scrollToBottom();
 
       try {
-        if (_predefinedResponses.containsKey(message)) {
-          _addBotMessage(_predefinedResponses[message]!);
-          return;
-        }
-
-        var response = await _rasaService.sendMessage(message);
-        if (response.isNotEmpty) {
-          _addBotMessage(response[0]['text']);
-        } else {
-          _addBotMessage("I'm not sure how to respond to that. Could you rephrase or ask something else?");
-        }
+        String response = await _geminiService.sendMessage(message, institution);
+        _addBotMessage(response);
       } catch (e) {
-        _addBotMessage("Sorry, I couldn't connect to the server. Please try again later.");
+        _addBotMessage("Sorry, I couldn't process your request. Please try again later.");
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -104,10 +111,10 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
     _scrollToBottom();
   }
 
-  void _startNewChat() {
-    Navigator.push(
+    void _startNewChat() {
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => Chatbot()),
+      MaterialPageRoute(builder: (context) => const Chatbot()),
     );
   }
 
@@ -135,7 +142,7 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
@@ -155,73 +162,46 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
               decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
               child: Center(
                 child: Text(
-                  "Guest Menu",
+                  "Chat History",
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: theme.colorScheme.primary,
                   ),
                 ),
               ),
             ),
-            ExpansionTile(
-              leading: Icon(Icons.history, color: theme.colorScheme.onBackground),
-              title: Text('Chat History', style: theme.textTheme.titleMedium),
-              children: [
-                _chatHistory.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No previous chats',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: _chatHistory.length,
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            title: Text(
-                              _chatHistory[index]['title'],
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                color: _currentChatIndex == index
-                                    ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurface,
-                              ),
-                            ),
-                            onTap: () => _loadChat(index),
-                            trailing: IconButton(
-                              icon: Icon(Icons.delete, color: theme.colorScheme.error),
-                              onPressed: () => _deleteChat(index),
-                            ),
-                          );
-                        },
-                      ),
-                ListTile(
-                  leading: Icon(Icons.add, color: theme.colorScheme.onBackground),
-                  title: Text('Start New Chat', style: theme.textTheme.bodyLarge),
-                  onTap: _startNewChat,
-                ),
-              ],
+            ListTile(
+              leading: Icon(Icons.add, color: theme.colorScheme.primary),
+              title: Text('New Chat', style: theme.textTheme.titleMedium),
+              onTap: _startNewChat,
             ),
+            const Divider(),
+            ..._chatHistory.map((chat) => ListTile(
+              title: Text(
+                chat['title'],
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: _chatHistory.indexOf(chat) == _currentChatIndex
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface,
+                ),
+              ),
+              onTap: () => _loadChat(_chatHistory.indexOf(chat)),
+              trailing: IconButton(
+                icon: Icon(Icons.delete, color: theme.colorScheme.error),
+                onPressed: () => _deleteChat(_chatHistory.indexOf(chat)),
+              ),
+            )).toList(),
           ],
         ),
       ),
       appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: Text('Chatbot'),
+        title: const Text('Campus Master'),
         actions: [
           IconButton(
-            icon: Icon(Icons.account_circle),
+            icon: const Icon(Icons.account_circle),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
+                MaterialPageRoute(builder: (context) =>  ProfilePage()),
               );
             },
           ),
@@ -231,86 +211,45 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
         color: theme.colorScheme.background,
         child: Column(
           children: [
+            if (_welcomeText.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  _welcomeText,
+                  style: theme.textTheme.headlineMedium,
+                ),
+              ),
             Expanded(
-              child: _welcomeText.isEmpty
-                  ? SizedBox.shrink()
-                  : Center(
-                      child: Text(
-                        _welcomeText,
-                        style: theme.textTheme.headlineMedium,
-                      ),
-                    ),
-            ),
-            Expanded(
-              flex: 2,
               child: ListView.builder(
                 controller: _scrollController,
+                padding: const EdgeInsets.all(8.0),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
-                  bool isUserMessage = _messages[index].startsWith("You:");
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: isUserMessage
-                          ? MainAxisAlignment.end
-                          : MainAxisAlignment.start,
-                      children: [
-                        if (!isUserMessage)
-                          CircleAvatar(
-                            backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                            child: Icon(Icons.smart_toy, color: theme.colorScheme.primary),
-                          ),
-                        SizedBox(width: 8),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: isUserMessage
-                                ? CrossAxisAlignment.end
-                                : CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isUserMessage ? 'You' : 'Campus_Master',
-                                style: theme.textTheme.bodySmall,
-                              ),
-                              Container(
-                                padding: EdgeInsets.all(10),
-                                constraints: BoxConstraints(
-                                  maxWidth: MediaQuery.of(context).size.width * 0.7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isUserMessage
-                                      ? theme.colorScheme.primary.withOpacity(0.2)
-                                      : theme.colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  _messages[index].substring(4),
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (isUserMessage)
-                          SizedBox(width: 8),
-                        if (isUserMessage)
-                          CircleAvatar(
-                            backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                            child: Icon(Icons.person, color: theme.colorScheme.primary),
-                          ),
-                      ],
-                    ),
+                  final isUserMessage = _messages[index].startsWith("You:");
+                  final message = _messages[index].substring(5);
+                  
+                  return MessageBubble(
+                    message: message,
+                    isUser: isUserMessage,
+                    theme: theme,
                   );
                 },
               ),
             ),
+            if (_isLoading)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
             if (_isEmojiPickerVisible)
               Container(
                 height: 250,
                 color: theme.colorScheme.surface,
                 child: GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 5,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 8,
                     childAspectRatio: 1,
                   ),
                   itemCount: _emojis.length,
@@ -324,67 +263,130 @@ class _ChatbotState extends State<Chatbot> with SingleTickerProviderStateMixin {
                       },
                       child: Center(
                         child: Text(
-                          _emojis[index], 
-                          style: TextStyle(fontSize: 24)
+                          _emojis[index],
+                          style: const TextStyle(fontSize: 24),
                         ),
                       ),
                     );
                   },
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  TextField(
-                    controller: _controller,
-                    cursorColor: theme.colorScheme.primary,
-                    textAlignVertical: TextAlignVertical.center,
-                    style: theme.textTheme.bodyLarge,
-                    decoration: InputDecoration(
-                      hintText: 'Chat with Campus Master...',
-                      hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                      filled: true,
-                      fillColor: theme.colorScheme.surface,
-                      contentPadding: EdgeInsets.symmetric(
-                        vertical: 10.0,
-                        horizontal: 50.0,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.outline,
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 10.0,
-                    child: IconButton(
-                      icon: Icon(Icons.emoji_emotions, color: theme.colorScheme.primary),
-                      onPressed: () {
-                        setState(() {
-                          _isEmojiPickerVisible = !_isEmojiPickerVisible;
-                        });
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    right: 10.0,
-                    child: IconButton(
-                      icon: Icon(Icons.send, color: theme.colorScheme.primary),
-                      onPressed: _sendMessage,
-                    ),
-                  ),
-                ],
-              ),
+            ChatInput(
+              controller: _controller,
+              onSend: _sendMessage,
+              onEmojiTap: () {
+                setState(() {
+                  _isEmojiPickerVisible = !_isEmojiPickerVisible;
+                });
+              },
+              theme: theme,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Separate widget for message bubbles
+class MessageBubble extends StatelessWidget {
+  final String message;
+  final bool isUser;
+  final ThemeData theme;
+
+  const MessageBubble({
+    required this.message,
+    required this.isUser,
+    required this.theme,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isUser)
+            CircleAvatar(
+              backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+              child: Icon(Icons.smart_toy, color: theme.colorScheme.primary),
+            ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isUser
+                    ? theme.colorScheme.primary.withOpacity(0.2)
+                    : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (isUser)
+            CircleAvatar(
+              backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+              child: Icon(Icons.person, color: theme.colorScheme.primary),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// Separate widget for chat input
+class ChatInput extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSend;
+  final VoidCallback onEmojiTap;
+  final ThemeData theme;
+
+  const ChatInput({
+    required this.controller,
+    required this.onSend,
+    required this.onEmojiTap,
+    required this.theme,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.emoji_emotions, color: theme.colorScheme.primary),
+            onPressed: onEmojiTap,
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Type your message...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.send, color: theme.colorScheme.primary),
+            onPressed: onSend,
+          ),
+        ],
       ),
     );
   }
