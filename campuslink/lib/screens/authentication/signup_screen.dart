@@ -31,7 +31,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _errorMessage = null;
     });
 
-    final url = Uri.parse('http://192.168.1.78/signup.php');
+    final url = Uri.parse('http://192.168.1.5/clink/api/admin_signup.php');
     try {
       final response = await http.post(
         url,

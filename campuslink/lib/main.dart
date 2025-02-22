@@ -8,7 +8,7 @@
   import 'package:campuslink/widgets/main_page.dart';
   import 'package:campuslink/widgets/profile.dart';
   import 'package:campuslink/data/data_provider.dart';
-import 'package:campuslink/widgets/splash_screen.dart';
+  import 'package:campuslink/widgets/splash_screen.dart';
   import 'package:flutter/material.dart';
   import 'package:provider/provider.dart';
 

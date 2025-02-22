@@ -25,91 +25,94 @@ class _LoginScreenState extends State<LoginScreen> {
   bool get _isAdminLogin => widget.userType.toLowerCase() == 'admin';
   bool get _isGuestLogin => widget.userType.toLowerCase() == 'guest';
 
-  Future<void> _validateAndLogin() async {
-    setState(() {
-      _errorMessage = null;
-      _isLoading = true;
-    });
+ Future<void> _validateAndLogin() async {
+  setState(() {
+    _errorMessage = null;
+    _isLoading = true;
+  });
 
-    try {
-      final username = _usernameController.text.trim();
-      final institution = _institutionController.text.trim();
+  try {
+    final username = _usernameController.text.trim();
+    final institution = _institutionController.text.trim();
 
-      if (username.isEmpty) {
-        throw 'Please enter a username';
-      }
-
-      if (!_isGuestLogin && institution.isEmpty) {
-        throw 'Please enter your institution';
-      }
-
-      if (!_isGuestLogin && _passwordController.text.isEmpty) {
-        throw 'Please enter a password';
-      }
-
-      Map<String, dynamic> requestBody = {
-        'username': username,
-        'userType': widget.userType.toLowerCase(),
-      };
-
-      if (!_isGuestLogin) {
-        requestBody['password'] = _passwordController.text;
-        requestBody['institution'] = institution;
-      }
-
-      final response = await http.post(
-        Uri.parse('http://192.168.1.78/login.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.body.isEmpty) {
-        throw 'Server returned empty response';
-      }
-
-      final data = jsonDecode(response.body);
-
-      if (data['status'] == 'success') {
-        final userId = data['user']['user_id']?.toString() ?? '';
-        final userType = widget.userType;
-        final dataProvider = Provider.of<DataProvider>(context, listen: false);
-        dataProvider.currentInstitution = data['user']['institution']?.toString() ?? '';
-
-        await saveUserData(data['user']['institution']?.toString() ?? '');
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('userId', userId);
-        await prefs.setString('userType', userType);
-        await prefs.setString('institution', institution);
-
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/main',
-          (route) => false,
-          arguments: {
-            'userType': userType,
-            'userId': userId,
-            'institution': institution,
-          },
-        );
-      } else {
-        throw data['message'] ?? 'Login failed';
-      }
-    } catch (e) {
-      setState(() {
-        if (e is FormatException) {
-          _errorMessage = 'Invalid server response';
-        } else {
-          _errorMessage = e.toString();
-        }
-      });
-      print('Login error: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+    if (username.isEmpty) {
+      throw 'Please enter a username';
     }
+
+    if (!_isGuestLogin && institution.isEmpty) {
+      throw 'Please enter your institution';
+    }
+
+    if (!_isGuestLogin && _passwordController.text.isEmpty) {
+      throw 'Please enter a password';
+    }
+
+    Map<String, dynamic> requestBody = {
+      'username': username,
+      'userType': widget.userType.toLowerCase(),
+    };
+
+    if (!_isGuestLogin) {
+      requestBody['password'] = _passwordController.text;
+      requestBody['institution'] = institution;
+    }
+
+    final response = await http.post(
+      Uri.parse('http://192.168.1.5/clink/api/login.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(requestBody),
+    );
+
+    // Log the raw response body
+    print('Response body: ${response.body}');
+
+    if (response.body.isEmpty) {
+      throw 'Server returned empty response';
+    }
+
+    final data = jsonDecode(response.body);
+
+    if (data['status'] == 'success') {
+      final userId = data['user']['user_id']?.toString() ?? '';
+      final userType = widget.userType;
+      final dataProvider = Provider.of<DataProvider>(context, listen: false);
+      dataProvider.currentInstitution = data['user']['institution']?.toString() ?? '';
+
+      await saveUserData(data['user']['institution']?.toString() ?? '');
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('userId', userId);
+      await prefs.setString('userType', userType);
+      await prefs.setString('institution', institution);
+
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/main',
+        (route) => false,
+        arguments: {
+          'userType': userType,
+          'userId': userId,
+          'institution': institution,
+        },
+      );
+    } else {
+      throw data['message'] ?? 'Login failed';
+    }
+  } catch (e) {
+    setState(() {
+      if (e is FormatException) {
+        _errorMessage = 'Invalid server response';
+      } else {
+        _errorMessage = e.toString(); 
+      }
+    });
+    print('Login error: $e');
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {

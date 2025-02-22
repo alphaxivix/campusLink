@@ -36,11 +36,15 @@ class _UserDashboardState extends State<UserDashboard> {
   late StreamSubscription eventUpdateSubscription;
   Map<String, dynamic> upcomingEvent = {};
 
+  // Add state variables for total students and teachers
+  int _totalStudents = 0;
+  int _totalTeachers = 0;
+
   @override
   void initState() {
     super.initState();
     fetchUpcomingEvent();
-     _initializeData();
+    _initializeData();
     eventUpdateSubscription = UserDashboard.eventUpdateController.stream.listen((_) {
       fetchUpcomingEvent();
     });
@@ -53,11 +57,51 @@ class _UserDashboardState extends State<UserDashboard> {
   }
 
   Future<void> _initializeData() async {
-  await loadUserData();
-  fetchUpcomingEvent();
-}
+    await loadUserData();
+    fetchUpcomingEvent();
+    fetchCounts();
+  }
 
-Future<void> loadUserData() async {
+  Future<void> fetchCounts() async {
+    try {
+      final totalStudents = await fetchTotalStudents();
+      final totalTeachers = await fetchTotalTeachers();
+      setState(() {
+        _totalStudents = totalStudents;
+        _totalTeachers = totalTeachers;
+      });
+    } catch (e) {
+      print('Error fetching counts: $e');
+    }
+  }
+
+  Future<int> fetchTotalStudents() async {
+    final response = await http.get(
+      Uri.parse('http://192.168.1.5/clink/api/get_total_students.php?institution=$institution'),
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      return responseData['total_students'];
+    } else {
+      throw Exception('Failed to fetch total students');
+    }
+  }
+
+  Future<int> fetchTotalTeachers() async {
+    final response = await http.get(
+      Uri.parse('http://192.168.1.5/clink/api/get_total_teachers.php?institution=$institution'),
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      return responseData['total_teachers'];
+    } else {
+      throw Exception('Failed to fetch total teachers');
+    }
+  }
+
+  Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       institution = prefs.getString('institution') ?? '';
@@ -66,59 +110,58 @@ Future<void> loadUserData() async {
   }
 
   Future<void> fetchUpcomingEvent() async {
-  try {
-    // Get institution from SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    final institution = prefs.getString('institution');
+    try {
+      // Get institution from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final institution = prefs.getString('institution');
 
-    if (institution == null || institution.isEmpty) {
-      throw Exception('Institution not found. Please log in again.');
-    }
-
-    final response = await http.get(
-      Uri.parse('http://192.168.1.78/upcoming_event.php?institution=$institution')
-    );
-
-    print('Response status code: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      
-      if (!responseData['success']) {
-        throw Exception(responseData['message']);
+      if (institution == null || institution.isEmpty) {
+        throw Exception('Institution not found. Please log in again.');
       }
 
-      final data = responseData['data'];
+      final response = await http.get(
+        Uri.parse('http://192.168.1.5/clink/api/upcoming_event.php?institution=$institution')
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        
+        if (!responseData['success']) {
+          throw Exception(responseData['message']);
+        }
+
+        final data = responseData['data'];
+        setState(() {
+          upcomingEvent = data;
+          eventTitle = data['title'] ?? 'No upcoming events';
+          eventDate = data['event_date'];
+        });
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message']);
+      }
+    } catch (e) {
       setState(() {
-        upcomingEvent = data;
-        eventTitle = data['title'] ?? 'No upcoming events';
-        eventDate = data['event_date'];
+        eventTitle = 'Error loading event';
+        eventDate = null;
+        upcomingEvent = {};
       });
-    } else {
-      final errorData = json.decode(response.body);
-      throw Exception(errorData['message']);
+      print('Error fetching upcoming event: $e');
+      
+      // Optional: Show error to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading upcoming event: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
-  } catch (e) {
-    setState(() {
-      eventTitle = 'Error loading event';
-      eventDate = null;
-      upcomingEvent = {};
-    });
-    print('Error fetching upcoming event: $e');
-    
-    // Optional: Show error to user
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error loading upcoming event: $e'),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
   }
-}
 
-
-@override
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
@@ -174,7 +217,7 @@ Future<void> loadUserData() async {
                     Expanded(
                       child: _buildAnimatedStatCard(
                         'Total Students',
-                        '1,234',
+                        _totalStudents.toString(),
                         Icons.school,
                         theme.colorScheme.primary,
                       ),
@@ -184,7 +227,7 @@ Future<void> loadUserData() async {
                       Expanded(
                         child: _buildAnimatedStatCard(
                           'Total Teachers',
-                          '89',
+                          _totalTeachers.toString(),
                           Icons.person,
                           theme.colorScheme.secondary,
                         ),
@@ -268,7 +311,6 @@ Future<void> loadUserData() async {
   }
 
   // Update the _buildAnimatedStatCard method
-// Update the _buildAnimatedStatCard method
 Widget _buildAnimatedStatCard(String title, String value, IconData icon, Color color) {
   final theme = Theme.of(context);
   final isDarkMode = theme.brightness == Brightness.dark;

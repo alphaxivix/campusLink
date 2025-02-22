@@ -36,3 +36,4 @@ class _CommunityPostState extends State<CommunityPost> {
     );
   }
 }
+

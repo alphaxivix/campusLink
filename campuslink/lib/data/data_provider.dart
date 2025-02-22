@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DataProvider with ChangeNotifier {
-  final String baseUrl = 'http://192.168.1.78/manage_teacher_and_student/user.php';
+  final String baseUrl = 'http://192.168.1.5/clink/api/manage_teachers_and_students.php';
   List<Student> _students = [];
   List<Teacher> _teachers = [];
   String? _error;
@@ -22,13 +22,17 @@ class DataProvider with ChangeNotifier {
   String? get error => _error;
 
   // Load user data from shared preferences
+   // Load user data from shared preferences
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final institution = prefs.getString('institution');
 
     if (institution != null) {
       _currentInstitution = institution;
+      print('Institution loaded: $_currentInstitution'); // Debug print
       notifyListeners(); // Notify listeners when data is set
+    } else {
+      print('No institution found in SharedPreferences'); // Debug print
     }
   }
 
@@ -154,7 +158,8 @@ class DataProvider with ChangeNotifier {
   }
 
   // Student Methods
- Future<void> fetchStudents() async {
+ // Fetch students after loading user data
+  Future<void> fetchStudents() async {
     await loadUserData(); // Load user data before fetching students
 
     if (_currentInstitution == null) {

@@ -17,7 +17,7 @@ class EventListScreen extends StatefulWidget {
 class _EventListScreenState extends State<EventListScreen> {
   List<dynamic> events = [];
   bool isLoading = true;
-  final String baseUrl = 'http://192.168.1.78/save_events.php';
+  final String baseUrl = 'http://192.168.1.5/clink/api/saveEvents.php';
 
   String institution = '';
 
@@ -40,7 +40,7 @@ Future<void> loadUserData() async {
     print('Institution loaded: $institution');
   }
 
-  Future<void> _loadEvents() async {
+Future<void> _loadEvents() async {
   setState(() => isLoading = true);
   try {
     // Get institution from SharedPreferences
@@ -61,7 +61,7 @@ Future<void> loadUserData() async {
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
       
-      if (!responseData['success']) {
+      if (responseData['status'] != 'success') {
         throw Exception(responseData['message']);
       }
       
@@ -74,6 +74,8 @@ Future<void> loadUserData() async {
       }
       
       final List<dynamic> decodedData = responseData['data'];
+      print('Decoded data: $decodedData'); // Debug print
+      
       decodedData.sort((a, b) => DateTime.parse(a['event_date'])
           .compareTo(DateTime.parse(b['event_date'])));
           
@@ -129,7 +131,7 @@ Future<void> loadUserData() async {
     );
   }
 
-  Future<void> _deleteEvent(String id) async {
+Future<void> _deleteEvent(String id) async {
   try {
     final prefs = await SharedPreferences.getInstance();
     final institution = prefs.getString('institution');
@@ -138,15 +140,31 @@ Future<void> loadUserData() async {
       throw Exception('Institution not found. Please log in again.');
     }
 
+    // Print debug information
+    print('Event ID: $id');
+    print('Institution: $institution');
+
+    final url = '$baseUrl';
+    print('Deleting event with URL: $url');
+
     final response = await http.delete(
-      Uri.parse('$baseUrl?id=$id&institution=$institution')
+      Uri.parse(url),
+      body: {
+        'action': 'delete',
+        'id': id,
+        'institution': institution,
+      },
     );
-    
+
+    print('Response status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
-      if (responseData['success']) {
-        UserDashboard.eventUpdateController.add(null);
-        _loadEvents();
+      if (responseData['status'] == 'success') {
+        setState(() {
+          events.removeWhere((event) => event['id'].toString() == id);
+        });
         _showSuccessSnackBar('Event deleted successfully');
       } else {
         throw Exception(responseData['message']);
@@ -157,6 +175,7 @@ Future<void> loadUserData() async {
     }
   } catch (e) {
     _showErrorSnackBar('Error deleting event: $e');
+    print('Error in _deleteEvent: $e');
   }
 }
 
@@ -235,33 +254,33 @@ Future<void> loadUserData() async {
                     padding: const EdgeInsets.all(16),
                     itemCount: events.length,
                     itemBuilder: (context, index) {
-                      final event = events[index];
-                      final eventDate = DateTime.parse(event['event_date']);
-                      final timeStatus = _getEventTimeStatus(event['event_date']);
-                      final bool isPastEvent = eventDate.isBefore(DateTime.now());
+  final event = events[index];
+  final eventDate = DateTime.parse(event['event_date']);
+  final timeStatus = _getEventTimeStatus(event['event_date']);
+  final bool isPastEvent = eventDate.isBefore(DateTime.now());
 
-                      if (index == 0 ||
-                          _getEventTimeStatus(events[index - 1]['event_date']) !=
-                              timeStatus) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (index != 0) const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Text(
-                                timeStatus,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  color: theme.colorScheme.onBackground,
-                                ),
-                              ),
-                            ),
-                            _buildEventCard(event, isPastEvent, theme),
-                          ],
-                        );
-                      }
-                      return _buildEventCard(event, isPastEvent, theme);
-                    },
+  // Prevent negative index access
+  if (index == 0 ||
+      _getEventTimeStatus(events[index - 1]['event_date']) != timeStatus) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (index != 0) const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            timeStatus,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onBackground,
+            ),
+          ),
+        ),
+        _buildEventCard(event, isPastEvent, theme),
+      ],
+    );
+  }
+  return _buildEventCard(event, isPastEvent, theme);
+},
                   ),
                 ),
       floatingActionButton: FloatingActionButton(

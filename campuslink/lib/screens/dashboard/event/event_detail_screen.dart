@@ -68,7 +68,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.78/get_event_details.php?id=${widget.eventId}&institution=$institution')
+        Uri.parse('http://192.168.1.5/clink/api/get_event_details.php?id=${widget.eventId}&institution=$institution')
       );
 
       print('Response status code: ${response.statusCode}');

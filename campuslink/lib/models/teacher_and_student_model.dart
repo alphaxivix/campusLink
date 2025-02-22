@@ -96,18 +96,18 @@ class Student {
     required this.email,
   });
 
-  factory Student.fromJson(Map<String, dynamic> json) {
-    return Student(
-      id: json['id'],
-      name: json['name'],
-      username: json['username'],
-      password: json['password'] ?? '',
-      grade: json['grade'],
-      section: json['section'],
-      contact: json['contact'],
-      email: json['email'],
-    );
-  }
+ factory Student.fromJson(Map<String, dynamic> json) {
+  return Student(
+    id: json['id'] ?? 'N/A',
+    name: (json['name'] != null && json['name'].toString().trim().isNotEmpty) ? json['name'] : 'Unnamed Student',
+    username: (json['username'] != null && json['username'].toString().trim().isNotEmpty) ? json['username'] : 'No Username',
+    password: json['password'] ?? '',
+    grade: (json['grade'] != null && json['grade'].toString().trim().isNotEmpty) ? json['grade'] : 'Not Assigned',
+    section: (json['section'] != null && json['section'].toString().trim().isNotEmpty) ? json['section'] : 'Not Assigned',
+    contact: (json['contact'] != null && json['contact'].toString().trim().isNotEmpty) ? json['contact'] : 'No Contact',
+    email: (json['email'] != null && json['email'].toString().trim().isNotEmpty) ? json['email'] : 'No Email',
+  );
+}
 
   Map<String, dynamic> toJson() {
     return {

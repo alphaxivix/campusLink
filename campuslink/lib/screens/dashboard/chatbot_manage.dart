@@ -39,7 +39,7 @@ class _ChatbotManagementScreenState extends State<ChatbotManagementScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.78/get_predefined_questions.php')
+        Uri.parse('http://192.168.1.5/clink/api/get_predefined_questions.php')
       );
 
       if (response.statusCode == 200) {
@@ -67,7 +67,7 @@ void fetchAdminAnswers() async {
 
   try {
     final response = await http.get(
-      Uri.parse('http://192.168.1.78/get_admin_answers.php?institution=$institution')
+      Uri.parse('http://192.168.1.5/clink/api/get_admin_answers.php?institution=$institution')
     );
 
     if (response.statusCode == 200) {
@@ -97,7 +97,7 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
     };
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.78/save_admin_answer.php'),
+      Uri.parse('http://192.168.1.5/clink/api/save_admin_answer.php'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode(payload)
     );
@@ -329,8 +329,116 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
                 );
               },
             ),
+            // Add this Floating Action Button in the build method's Scaffold
+floatingActionButton: FloatingActionButton(
+  onPressed: _showAddQuestionDialog,
+  child: Icon(Icons.add),
+  tooltip: 'Add Predefined Question',
+),
     );
   }
+  // Add this inside ChatbotManagementScreen class
+
+// Function to show the dialog for adding a predefined question
+void _showAddQuestionDialog() {
+  final categoryController = TextEditingController();
+  final questionController = TextEditingController();
+  final keywordsController = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add New Predefined Question', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            Form(
+              key: formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: categoryController,
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    validator: (value) => value!.isEmpty ? 'Enter a category' : null,
+                  ),
+                  TextFormField(
+                    controller: questionController,
+                    decoration: const InputDecoration(labelText: 'Question Text'),
+                    validator: (value) => value!.isEmpty ? 'Enter a question' : null,
+                  ),
+                  TextFormField(
+                    controller: keywordsController,
+                    decoration: const InputDecoration(labelText: 'Keywords (comma-separated)'),
+                    validator: (value) => value!.isEmpty ? 'Enter keywords' : null,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      _savePredefinedQuestion(
+                        categoryController.text,
+                        questionController.text,
+                        keywordsController.text,
+                      );
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// Function to call the API and save the question
+Future<void> _savePredefinedQuestion(String category, String questionText, String keywords) async {
+  try {
+    final response = await http.post(
+      Uri.parse('http://192.168.1.5/clink/api/add_predefined_question.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'category': category,
+        'question_text': questionText,
+        'keywords': keywords,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+      if (responseBody['success'] == true) {
+        fetchPredefinedQuestions(); // Refresh the list
+        _showSuccessSnackBar('Question added successfully');
+      } else {
+        _showErrorSnackBar('Failed to add question: ${responseBody['error']}');
+      }
+    } else {
+      _showErrorSnackBar('HTTP Error: ${response.statusCode}');
+    }
+  } catch (e) {
+    _showErrorSnackBar('Error: $e');
+  }
+}
+
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -365,13 +473,14 @@ class PredefinedQuestion {
   });
 
   factory PredefinedQuestion.fromJson(Map<String, dynamic> json) {
-    return PredefinedQuestion(
-      id: json['id'],
-      category: json['category'],
-      questionText: json['question_text'],
-      keywords: List<String>.from(json['keywords']),
-    );
-  }
+  return PredefinedQuestion(
+    id: json['id'],
+    category: json['category'],
+    questionText: json['question_text'],
+    keywords: json['keywords'].toString().split(','),
+  );
+}
+
 }
 
 class AdminAnswer {

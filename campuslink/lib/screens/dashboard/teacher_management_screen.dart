@@ -172,6 +172,19 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
               );
               context.read<DataProvider>().addTeacher(teacher);
               Navigator.pop(context);
+              // Show success snackbar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('teacher added successfully!'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 3),
+              ),
+            );
             },
             child: const Text('Save'),
           ),

@@ -33,7 +33,7 @@ class _EventFormState extends State<EventForm> {
   List<Map<String, String>> coordinators = [];
 
   // API URL - Change this to match your XAMPP setup
-  final String apiUrl = 'http://192.168.1.78/save_events.php';
+  final String apiUrl = 'http://192.168.1.5/clink/api/saveEvents.php';
 
   String institution = '';
 
@@ -137,11 +137,16 @@ Future<void> _loadEventData() async {
     try {
       final Uri uri = Uri.parse(apiUrl);
       final response = widget.eventId == null
-          ? await http.post(uri, body: json.encode(eventData))
-          : await http.put(
-              Uri.parse('$apiUrl?id=${widget.eventId}'),
-              body: json.encode(eventData),
-            );
+    ? await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(eventData),
+      )
+    : await http.put(
+        Uri.parse('$apiUrl?id=${widget.eventId}'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(eventData),
+      );
 
       final responseData = json.decode(response.body);
       
@@ -171,61 +176,61 @@ Future<void> _loadEventData() async {
     );
   }
 
-  Widget _buildBasicDetailsForm() {
-    return Column(
-      children: [
-        TextFormField(
-          controller: _titleController,
-          decoration: const InputDecoration(
-            labelText: 'Event Title',
-            border: OutlineInputBorder(),
-          ),
-          validator: (value) =>
-              value?.isEmpty == true ? 'Please enter event title' : null,
+ Widget _buildBasicDetailsForm() {
+  return Column(
+    children: [
+      TextFormField(
+        controller: _titleController,
+        decoration: const InputDecoration(
+          labelText: 'Event Title',
+          border: OutlineInputBorder(),
         ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _descriptionController,
-          decoration: const InputDecoration(
-            labelText: 'Description',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-          validator: (value) =>
-              value?.isEmpty == true ? 'Please enter event description' : null,
+        validator: (value) =>
+            value?.isEmpty == true ? 'Please enter event title' : null,
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: _descriptionController,
+        decoration: const InputDecoration(
+          labelText: 'Description',
+          border: OutlineInputBorder(),
         ),
-        const SizedBox(height: 16),
-        ListTile(
-          title: Text('Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}'),
-          trailing: const Icon(Icons.calendar_today),
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate,
-              firstDate: DateTime.now(),
-              lastDate: DateTime(2025),
-            );
-            if (picked != null) {
-              setState(() => _selectedDate = picked);
-            }
-          },
-        ),
-        ListTile(
-          title: Text('Time: ${_selectedTime.format(context)}'),
-          trailing: const Icon(Icons.access_time),
-          onTap: () async {
-            final picked = await showTimePicker(
-              context: context,
-              initialTime: _selectedTime,
-            );
-            if (picked != null) {
-              setState(() => _selectedTime = picked);
-            }
-          },
-        ),
-      ],
-    );
-  }
+        maxLines: 3,
+        validator: (value) =>
+            value?.isEmpty == true ? 'Please enter event description' : null,
+      ),
+      const SizedBox(height: 16),
+      ListTile(
+        title: Text('Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}'),
+        trailing: const Icon(Icons.calendar_today),
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: _selectedDate,
+            firstDate: DateTime.now(),
+            lastDate: DateTime(2025, 12, 31),
+          );
+          if (picked != null) {
+            setState(() => _selectedDate = picked);
+          }
+        },
+      ),
+      ListTile(
+        title: Text('Time: ${_selectedTime.format(context)}'),
+        trailing: const Icon(Icons.access_time),
+        onTap: () async {
+          final picked = await showTimePicker(
+            context: context,
+            initialTime: _selectedTime,
+          );
+          if (picked != null) {
+            setState(() => _selectedTime = picked);
+          }
+        },
+      ),
+    ],
+  );
+}
 
   Widget _buildLocationForm() {
     return Column(

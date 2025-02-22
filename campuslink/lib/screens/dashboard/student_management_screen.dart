@@ -84,95 +84,120 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     );
   }
 
-  void _showAddStudentDialog(BuildContext context) {
-    final theme = Theme.of(context);
-    final nameController = TextEditingController();
-    final usernameController = TextEditingController();
-    final passwordController = TextEditingController();
-    final gradeController = TextEditingController();
-    final sectionController = TextEditingController();
-    final contactController = TextEditingController();
-    final emailController = TextEditingController();
+ void _showAddStudentDialog(BuildContext context) {
+  final theme = Theme.of(context);
+  final nameController = TextEditingController();
+  final usernameController = TextEditingController();
+  final passwordController = TextEditingController();
+  final gradeController = TextEditingController();
+  final sectionController = TextEditingController();
+  final contactController = TextEditingController();
+  final emailController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Add New Student', style: theme.textTheme.headlineSmall),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: usernameController,
-                decoration: const InputDecoration(labelText: 'Username'),
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: gradeController,
-                decoration: const InputDecoration(labelText: 'Grade/Year'),
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: sectionController,
-                decoration: const InputDecoration(labelText: 'Section'),
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: contactController,
-                decoration: const InputDecoration(labelText: 'Contact'),
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                style: theme.textTheme.bodyLarge,
-              ),
-            ],
-          ),
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Add New Student', style: theme.textTheme.headlineSmall),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Full Name'),
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: usernameController,
+              decoration: const InputDecoration(labelText: 'Username'),
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              decoration: const InputDecoration(labelText: 'Password'),
+              obscureText: true,
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: gradeController,
+              decoration: const InputDecoration(labelText: 'Grade/Year'),
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: sectionController,
+              decoration: const InputDecoration(labelText: 'Section'),
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: contactController,
+              decoration: const InputDecoration(labelText: 'Contact'),
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+              style: theme.textTheme.bodyLarge,
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final student = Student(
-                id: 'STD${DateTime.now().millisecondsSinceEpoch}',
-                name: nameController.text,
-                username: usernameController.text,
-                password: passwordController.text,
-                grade: gradeController.text,
-                section: sectionController.text,
-                contact: contactController.text,
-                email: emailController.text,
-              );
-              context.read<DataProvider>().addStudent(student);
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final student = Student(
+              id: 'STD${DateTime.now().millisecondsSinceEpoch}',
+              name: nameController.text,
+              username: usernameController.text,
+              password: passwordController.text,
+              grade: gradeController.text,
+              section: sectionController.text,
+              contact: contactController.text,
+              email: emailController.text,
+            );
+            await context.read<DataProvider>().addStudent(student);
+            Navigator.pop(context);
+
+            // Show success snackbar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Student added successfully!'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+
+            // Navigate back to the ManageStudentsScreen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ManageStudentsScreen(
+                  userType: widget.userType,
+                  userId: widget.userId,
+                ),
+              ),
+            );
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
+}
 }
 
 class StudentCard extends StatelessWidget {
