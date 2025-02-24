@@ -17,7 +17,7 @@ class EventListScreen extends StatefulWidget {
 class _EventListScreenState extends State<EventListScreen> {
   List<dynamic> events = [];
   bool isLoading = true;
-  final String baseUrl = 'http://192.168.1.5/clink/api/saveEvents.php';
+  final String baseUrl = 'http://192.168.1.3/clink/api/saveEvents.php';
 
   String institution = '';
 

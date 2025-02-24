@@ -3,6 +3,7 @@ import 'package:campuslink/screens/chatbot/chatbot.dart';
 import 'package:campuslink/screens/chatroom/chatroom.dart';
 import 'package:campuslink/screens/community_post/community_post.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NavItem {
   final IconData icon;
@@ -26,19 +27,29 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
   late List<Widget> _pages;
   late List<NavItem> _navItems;
+  String? _username;
 
   @override
   void initState() {
     super.initState();
-    _initializeNavigation();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('userId');
+      _initializeNavigation();
+    });
   }
 
   void _initializeNavigation() {
+    if (_username == null) return;
+
     final baseNavItems = <NavItem>[
       const NavItem(
         icon: Icons.dashboard_rounded,
@@ -56,7 +67,7 @@ class _MainPageState extends State<MainPage> {
       case 'Guest':
         _pages = [
           UserDashboard(userRole: widget.userType, userId: widget.userId),
-          CommunityPost(),
+          CommunityPost(username: _username!),
           Chatbot(),
         ];
         _navItems = [
@@ -67,17 +78,13 @@ class _MainPageState extends State<MainPage> {
             activeColor: Color(0xFFCF6679),
           ),
         ];
+        break;
       case 'Admin':
       case 'Student':
       case 'Teacher':
         _pages = [
-          if (widget.userType == 'Admin')
-            UserDashboard(userRole: widget.userType, userId: widget.userId)
-          else if (widget.userType == 'Student')
-            UserDashboard(userRole: widget.userType, userId: widget.userId)
-          else
-            UserDashboard(userRole: widget.userType, userId: widget.userId),
-          CommunityPost(),
+          UserDashboard(userRole: widget.userType, userId: widget.userId),
+          CommunityPost(username: _username!),
           Chatroom(),
           Chatbot(),
         ];
@@ -94,11 +101,18 @@ class _MainPageState extends State<MainPage> {
             activeColor: Color(0xFFCF6679),
           ),
         ];
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_username == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       body: _pages[_currentIndex],
@@ -137,7 +151,7 @@ class _MainPageState extends State<MainPage> {
           vertical: 8.0,
         ),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? item.activeColor.withOpacity(0.2)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),

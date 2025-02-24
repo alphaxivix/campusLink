@@ -77,7 +77,7 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Future<int> fetchTotalStudents() async {
     final response = await http.get(
-      Uri.parse('http://192.168.1.5/clink/api/get_total_students.php?institution=$institution'),
+      Uri.parse('http://192.168.1.3/clink/api/get_total_students.php?institution=$institution'),
     );
 
     if (response.statusCode == 200) {
@@ -90,7 +90,7 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Future<int> fetchTotalTeachers() async {
     final response = await http.get(
-      Uri.parse('http://192.168.1.5/clink/api/get_total_teachers.php?institution=$institution'),
+      Uri.parse('http://192.168.1.3/clink/api/get_total_teachers.php?institution=$institution'),
     );
 
     if (response.statusCode == 200) {
@@ -120,7 +120,7 @@ class _UserDashboardState extends State<UserDashboard> {
       }
 
       final response = await http.get(
-        Uri.parse('http://192.168.1.5/clink/api/upcoming_event.php?institution=$institution')
+        Uri.parse('http://192.168.1.3/clink/api/upcoming_event.php?institution=$institution')
       );
 
       print('Response status code: ${response.statusCode}');

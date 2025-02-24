@@ -15,14 +15,33 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _profileImagePath;
   final ImagePicker _picker = ImagePicker();
 
-  // Mock user data
+  // User data fetched from SharedPreferences
   Map<String, String> userData = {
-    'name': 'John Doe',
-    'university': 'XYZ University',
-    'password': '••••••••',
-    'email': 'john.doe@example.com',
-    'studentId': 'STU123456',
+    'name': '',
+    'university': '',
+    'password': '',
+    'email': '',
+    'studentId': '',
   };
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
+
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userData = {
+        'name': prefs.getString('userId') ?? 'Unknown User',
+        'university': prefs.getString('institution') ?? 'Unknown Institution',
+        'password': prefs.getString('password') ?? '••••••••',
+        'email': prefs.getString('email') ?? 'No Email Found',
+        'studentId': prefs.getString('userId') ?? 'No ID Found',
+      };
+    });
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -31,8 +50,6 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           _profileImagePath = image.path;
         });
-        // Here you would typically upload the image to your server
-        // and get back a URL to store
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -45,7 +62,7 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
-      
+
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/homeScreen',
@@ -59,21 +76,29 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _toggleEditMode() {
+  void _toggleEditMode() async {
     setState(() {
       _isEditing = !_isEditing;
-      if (!_isEditing) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
-      }
     });
+
+    // Save changes when exiting edit mode
+    if (!_isEditing) {
+      final prefs = await SharedPreferences.getInstance();
+      if (_passwordController.text.isNotEmpty) {
+        await prefs.setString('password', _passwordController.text);
+        userData['password'] = _passwordController.text;
+      }
+      _passwordController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -195,9 +220,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   List<Widget> _buildDetailCards(ThemeData theme) {
     final List<Map<String, dynamic>> details = [
-      {'icon': Icons.person, 'title': 'Name', 'value': userData['name']!},
+      {'icon': Icons.person, 'title': 'User ID', 'value': userData['name']!},
       {'icon': Icons.lock, 'title': 'Password', 'value': userData['password']!, 'isPassword': true},
-      {'icon': Icons.school, 'title': 'University', 'value': userData['university']!},
+      {'icon': Icons.school, 'title': 'Institution', 'value': userData['university']!},
       {'icon': Icons.email, 'title': 'Email', 'value': userData['email']!},
       {'icon': Icons.badge, 'title': 'Student ID', 'value': userData['studentId']!},
     ];
@@ -242,6 +267,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: theme.textTheme.bodySmall,
                   ),
                   SizedBox(height: 5),
+
+                  // Editable TextFields for editing
                   if (_isEditing && detail['isPassword'] == true)
                     TextField(
                       controller: _passwordController,
@@ -258,13 +285,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                         hintText: 'Enter new password',
-                      ),
-                    )
-                  else if (_isEditing)
-                    TextField(
-                      controller: TextEditingController(text: detail['value'] as String),
-                      decoration: InputDecoration(
-                        hintText: 'Enter ${detail['title']}',
                       ),
                     )
                   else

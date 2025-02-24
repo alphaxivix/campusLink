@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DataProvider with ChangeNotifier {
-  final String baseUrl = 'http://192.168.1.5/clink/api/manage_teachers_and_students.php';
+  final String baseUrl = 'http://192.168.1.3/clink/api/manage_teachers_and_students.php';
   List<Student> _students = [];
   List<Teacher> _teachers = [];
   String? _error;

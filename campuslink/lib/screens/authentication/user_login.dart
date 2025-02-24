@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.5/clink/api/login.php'),
+      Uri.parse('http://192.168.1.3/clink/api/login.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(requestBody),
     );
@@ -73,19 +73,24 @@ class _LoginScreenState extends State<LoginScreen> {
     final data = jsonDecode(response.body);
 
     if (data['status'] == 'success') {
-      final userId = data['user']['user_id']?.toString() ?? '';
+      final user = data['user'];
+      final userId = user['user_id']?.toString() ?? '';
+      final email = user['email']?.toString() ?? '';
+      final password = _passwordController.text;
       final userType = widget.userType;
-      final dataProvider = Provider.of<DataProvider>(context, listen: false);
-      dataProvider.currentInstitution = data['user']['institution']?.toString() ?? '';
+      final institution = user['institution']?.toString() ?? '';
 
-      await saveUserData(data['user']['institution']?.toString() ?? '');
+      // Saving user data using saveUserData
+      await saveUserData(userId, email, password, userType, institution);
 
+      // Saving basic login state using SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('userId', userId);
       await prefs.setString('userType', userType);
       await prefs.setString('institution', institution);
 
+      // Navigate to the main screen
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/main',
         (route) => false,
@@ -103,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e is FormatException) {
         _errorMessage = 'Invalid server response';
       } else {
-        _errorMessage = e.toString(); 
+        _errorMessage = e.toString();
       }
     });
     print('Login error: $e');
@@ -113,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 }
+
 
   @override
   Widget build(BuildContext context) {

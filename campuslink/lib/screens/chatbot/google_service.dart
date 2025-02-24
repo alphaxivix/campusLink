@@ -22,13 +22,13 @@ class GeminiService {
 
     try {
       // Fetching answers related to the institution
-      final apiUrl = 'http://192.168.1.78/chatbot.php'; // Replace with your API URL
+      final apiUrl = 'http://192.168.1.3/clink/api/get_predefined_questions.php'; // Replace with your API URL
       final response = await http.get(Uri.parse('$apiUrl?institution=$institution'));
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
 
-        if (responseBody['success'] == true) {
+        if (responseBody['status'] == 'success') {
           List<dynamic> answers = responseBody['answers'];
           String formattedAnswers = answers
               .map((answer) => "Category: ${answer['category']}\nAnswer: ${answer['answer']}")

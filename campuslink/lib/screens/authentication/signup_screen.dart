@@ -31,7 +31,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _errorMessage = null;
     });
 
-    final url = Uri.parse('http://192.168.1.5/clink/api/admin_signup.php');
+    final url = Uri.parse('http://192.168.1.3/clink/api/admin_signup.php');
     try {
       final response = await http.post(
         url,
@@ -61,7 +61,14 @@ class _SignupScreenState extends State<SignupScreen> {
         final dataProvider = Provider.of<DataProvider>(context, listen: false);
         dataProvider.currentInstitution = responseData['institution'];
 
-        await saveUserData(responseData['institution']);
+          // Pass all required data to saveUserData
+      await saveUserData(
+        responseData['user_id'],
+        responseData['email'],
+        responseData['password'],
+        responseData['user_type'],
+        responseData['institution'],
+      );
       } else {
         setState(() {
           _errorMessage = responseData['message'] ?? 'An error occurred';
