@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:campuslink/data/config.dart';
 
 class GeminiService {
   final String geminiApiKey = 'AIzaSyDxJ589Ugje4yAJytAh3EJpkm6GIlX9JpI';
@@ -22,11 +23,12 @@ class GeminiService {
 
     try {
       // Fetching answers related to the institution
-      final apiUrl = 'http://192.168.1.3/clink/api/get_predefined_questions.php'; // Replace with your API URL
+      final apiUrl = '${Config.baseUrl}/clink/api/get_predefined_questions.php'; // Replace with your API URL
       final response = await http.get(Uri.parse('$apiUrl?institution=$institution'));
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
+        print('Predefined Questions API Response: $responseBody'); // Debug print
 
         if (responseBody['status'] == 'success') {
           List<dynamic> answers = responseBody['answers'];
@@ -69,19 +71,30 @@ class GeminiService {
 
           if (response.statusCode == 200) {
             final responseBody = json.decode(response.body);
-            String responseText = responseBody['candidates'][0]['content']['parts'][0]['text'];
+            print('Gemini API Response: $responseBody'); // Debug print
 
-            responseText = _transformText(responseText);
+            if (responseBody.containsKey('candidates') &&
+    responseBody['candidates'].isNotEmpty &&
+    responseBody['candidates'][0].containsKey('content') &&
+    responseBody['candidates'][0]['content'].isNotEmpty &&
+    responseBody['candidates'][0]['content'][0].containsKey('parts') &&
+    responseBody['candidates'][0]['content'][0]['parts'].isNotEmpty &&
+    responseBody['candidates'][0]['content'][0]['parts'][0].containsKey('text')) {
+  String responseText = responseBody['candidates'][0]['content'][0]['parts'][0]['text'];
+  responseText = _transformText(responseText);
 
-            return responseText.isNotEmpty
-                ? responseText
-                : "I apologize, but I couldn't find specific information about your query.";
+
+              return responseText.isNotEmpty
+                  ? responseText
+                  : "I apologize, but I couldn't find specific information about your query.";
+            } else {
+              return 'Error: Unexpected response structure from Gemini API.';
+            }
           } else {
             return 'Error: Unable to get response from Gemini. Status code: ${response.statusCode}';
           }
         } else {
-          return responseBody['message'] ??
-              "Unable to fetch data for the institution.";
+          return responseBody['message'] ?? "Unable to fetch data for the institution.";
         }
       } else {
         return 'Error: Unable to fetch data. Status code: ${response.statusCode}';
@@ -91,9 +104,3 @@ class GeminiService {
     }
   }
 }
-
-//also provide the backend php apiendpoints for me too ovikun!!!!!!
-//also provide the backend php apiendpoints for me too ovikun!!!!!!
-//also provide the backend php apiendpoints for me too ovikun!!!!!!
-//also provide the backend php apiendpoints for me too ovikun!!!!!!
-//also provide the backend php apiendpoints for me too ovikun!!!!!!

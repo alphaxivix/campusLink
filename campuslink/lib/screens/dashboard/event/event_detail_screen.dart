@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:campuslink/data/config.dart';
 
 
 class EventDetailScreen extends StatefulWidget {
@@ -68,7 +69,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.3/clink/api/get_event_details.php?id=${widget.eventId}&institution=$institution')
+        Uri.parse('${Config.baseUrl}/clink/api/get_event_details.php?id=${widget.eventId}&institution=$institution')
       );
 
       print('Response status code: ${response.statusCode}');

@@ -222,41 +222,52 @@ class StudentCard extends StatelessWidget {
           style: theme.textTheme.bodyMedium,
         ),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInfoRow(context, 'Username', student.username),
+        _buildInfoRow(context, 'Grade/Year', student.grade),
+        _buildInfoRow(context, 'Password', student.password),
+        _buildInfoRow(context, 'Section', student.section),
+        _buildInfoRow(context, 'Contact', student.contact),
+        _buildInfoRow(context, 'Email', student.email),
+        const SizedBox(height: 16),
+        Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildInfoRow(context, 'Username', student.username),
-                _buildInfoRow(context, 'Grade/Year', student.grade),
-                _buildInfoRow(context, 'Password', student.password),
-                _buildInfoRow(context, 'Section', student.section),
-                _buildInfoRow(context, 'Contact', student.contact),
-                _buildInfoRow(context, 'Email', student.email),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _showEditDialog(context),
-                      icon: Icon(Icons.edit, color: theme.colorScheme.primary),
-                      label: Text('Edit', style: TextStyle(color: theme.colorScheme.primary)),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () => _showDeleteDialog(context),
-                      icon: const Icon(Icons.delete),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.error,
-                        foregroundColor: theme.colorScheme.onError,
-                      ),
-                    ),
-                  ],
+                OutlinedButton.icon(
+                  onPressed: () => _showEditDialog(context),
+                  icon: Icon(Icons.edit, color: theme.colorScheme.primary),
+                  label: Text('Edit', style: TextStyle(color: theme.colorScheme.primary)),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _showDeleteDialog(context),
+                  icon: const Icon(Icons.delete),
+                  label: const Text('Delete'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.error,
+                    foregroundColor: theme.colorScheme.onError,
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 12), // Space between buttons
+            ElevatedButton.icon(
+              onPressed: () => _showEnrollBiometryDialog(context),
+              icon: const Icon(Icons.fingerprint),
+              label: const Text('Enroll for Biometry'),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ),
+],
+
       ),
     );
   }
@@ -396,5 +407,86 @@ class StudentCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showEnrollBiometryDialog(BuildContext context) {
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Enroll for Biometry', style: theme.textTheme.headlineSmall),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Place your finger on the fingerprint scanner.',
+                style: theme.textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              CircularProgressIndicator(),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    // Simulate fingerprint enrollment process
+    Future.delayed(Duration(seconds: 3), () {
+      Navigator.pop(context); // Close the initial dialog
+
+      // Show the second dialog for confirmation
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Enroll for Biometry', style: theme.textTheme.headlineSmall),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Fingerprint found. Place your finger again for confirmation.',
+                  style: theme.textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 16),
+                CircularProgressIndicator(),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+
+      // Simulate second fingerprint confirmation process
+      Future.delayed(Duration(seconds: 3), () {
+        Navigator.pop(context); // Close the confirmation dialog
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Fingerprint successfully enrolled!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      });
+    });
   }
 }

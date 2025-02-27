@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:campuslink/data/config.dart';
 
 // Define the Media model
 class Media {
@@ -20,7 +21,7 @@ class Media {
 }
 // // Define the fetchMedia function
 // Future<List<Media>> fetchMedia() async {
-//   const String apiUrl = 'http://192.168.1.4/campuslink/api/fetch_media.php'; // Replace with your API URL
+//   const String apiUrl = '${Config.baseUrl}/campuslink/api/fetch_media.php'; // Replace with your API URL
 //   final response = await http.get(Uri.parse(apiUrl));
 
 //   if (response.statusCode == 200) {
@@ -31,7 +32,7 @@ class Media {
 //     }
 //}
 Future<List<Media>> fetchMedia() async {
-  String apiUrl = 'http://192.168.1.3/clink/api/community/fetch_media.php';
+  String apiUrl = '${Config.baseUrl}/clink/api/community/fetch_media.php';
   final response = await http.get(Uri.parse(apiUrl));
 
   if (response.statusCode == 200) {

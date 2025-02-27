@@ -12,8 +12,11 @@ import 'package:campuslink/widgets/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:campuslink/services/media_provider.dart';
+import 'package:campuslink/services/my_http_overrides.dart'; // Import the file where MyHttpOverrides is defined
+import 'dart:io';
 
 void main() {
+  HttpOverrides.global = MyHttpOverrides();
   runApp(
     MultiProvider(
       providers: [

@@ -1,10 +1,21 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:path/path.dart'; // To get the filename
-import 'dart:convert'; // For jsonDecode
+import 'package:path/path.dart';
+import 'dart:convert';
+import 'dart:io' show HttpOverrides;
 
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
 
 Future<String?> uploadFile(String filePath, String uploadUrl) async {
+  HttpOverrides.global = MyHttpOverrides(); // Bypass SSL verification
+
   try {
     var request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
 
@@ -27,7 +38,7 @@ Future<String?> uploadFile(String filePath, String uploadUrl) async {
       var responseBody = await response.stream.bytesToString();
       var jsonResponse = jsonDecode(responseBody);
       if (jsonResponse['success']) {
-        return jsonResponse['file_url']; // Return the uploaded file URL
+        return jsonResponse['file_url'];
       } else {
         print("Upload failed: ${jsonResponse['message']}");
         return null;

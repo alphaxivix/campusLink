@@ -115,26 +115,40 @@ class _MainPageState extends State<MainPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
-      body: _pages[_currentIndex],
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F1F),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
+      body: Stack(
+        children: [
+          _pages[_currentIndex],
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              height: 70,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color.fromARGB(255, 0, 3, 95), Color.fromARGB(255, 35, 0, 74)], // Updated gradient colors
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(35),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(
+                  _navItems.length,
+                  (index) => _buildNavItem(_navItems[index], index),
+                ),
+              ),
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(
-            _navItems.length,
-            (index) => _buildNavItem(_navItems[index], index),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -161,7 +175,7 @@ class _MainPageState extends State<MainPage> {
           children: [
             Icon(
               item.icon,
-              color: isSelected ? item.activeColor : Colors.grey[400],
+              color: isSelected ? const Color.fromARGB(255, 255, 255, 255) : Colors.grey[400], // Updated icon color
               size: isSelected ? 28 : 24,
             ),
             if (isSelected) ...[
@@ -169,7 +183,7 @@ class _MainPageState extends State<MainPage> {
               Text(
                 item.label,
                 style: TextStyle(
-                  color: item.activeColor,
+                  color: const Color.fromARGB(255, 255, 255, 255), // Updated text color
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),

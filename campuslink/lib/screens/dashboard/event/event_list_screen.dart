@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'event_form.dart';
+import 'package:campuslink/data/config.dart';
 import '../../../app_theme.dart';
 
 class EventListScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class EventListScreen extends StatefulWidget {
 class _EventListScreenState extends State<EventListScreen> {
   List<dynamic> events = [];
   bool isLoading = true;
-  final String baseUrl = 'http://192.168.1.3/clink/api/saveEvents.php';
+  final String baseUrl = '${Config.baseUrl}/clink/api/saveEvents.php';
 
   String institution = '';
 

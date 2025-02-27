@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
     
+  cached_network_image: ^3.2.0 
   http: ^1.2.2
   flutter_animate: ^4.5.0
   provider: ^6.0.5
@@ -102,4 +103,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+dependency_overrides:
+  file_picker: ^9.0.1
+  async: ^2.13.0
+  fake_async: ^1.3.3
+  intl: ^0.20.2
+  leak_tracker: ^10.0.9
+  material_color_utilities: ^0.12.0
+  table_calendar: ^3.2.0
+  vm_service: ^15.0.0
 

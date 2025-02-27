@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:campuslink/data/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EventForm extends StatefulWidget {
@@ -33,7 +34,7 @@ class _EventFormState extends State<EventForm> {
   List<Map<String, String>> coordinators = [];
 
   // API URL - Change this to match your XAMPP setup
-  final String apiUrl = 'http://192.168.1.3/clink/api/saveEvents.php';
+  final String apiUrl = '${Config.baseUrl}/clink/api/saveEvents.php';
 
   String institution = '';
 

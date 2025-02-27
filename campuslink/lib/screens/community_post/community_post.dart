@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/profile.dart';
-import 'package:campuslink/services/add_post.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:campuslink/services/media_provider.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:flutter/widgets.dart';
-
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'package:campuslink/services/upload_media.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:campuslink/data/config.dart';
 
 class CommunityPost extends StatefulWidget {
   final String username;
@@ -25,11 +27,12 @@ class _CommunityPostState extends State<CommunityPost> {
   final ImagePicker _picker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
   bool _isUploadSectionVisible = true;
+  double _previousScrollOffset = 0;
 
   @override
   void initState() {
     super.initState();
-    Provider.of<MediaProvider>(context, listen: false).loadMedia();
+    Provider.of<MediaProvider>(context, listen: false).loadPosts();
     _scrollController.addListener(_scrollListener);
   }
 
@@ -41,25 +44,36 @@ class _CommunityPostState extends State<CommunityPost> {
   }
 
   void _scrollListener() {
-    if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-
+    double currentScroll = _scrollController.position.pixels;
+    if (currentScroll > _previousScrollOffset) {
+      // Scrolling down
       if (_isUploadSectionVisible) {
         setState(() {
           _isUploadSectionVisible = false;
         });
       }
-    }  else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-
+    } else if (currentScroll < _previousScrollOffset) {
+      // Scrolling up
       if (!_isUploadSectionVisible) {
         setState(() {
           _isUploadSectionVisible = true;
         });
       }
     }
+    _previousScrollOffset = currentScroll;
   }
 
   Future<void> _handleAddPost() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userName = prefs.getString('userId');
     final content = _postController.text.trim();
+
+    if (userName == null || userName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("User not found. Please log in again.")),
+      );
+      return;
+    }
 
     if (content.isEmpty && _selectedMedia == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,27 +86,43 @@ class _CommunityPostState extends State<CommunityPost> {
 
     try {
       String? mediaUrl;
-
-      // Upload media if selected
       if (_selectedMedia != null) {
-        mediaUrl = await Provider.of<MediaProvider>(context, listen: false)
-            .uploadMedia(_selectedMedia!);
+        // Upload the media and get the URL
+        mediaUrl = await uploadFile(
+          _selectedMedia!.path,
+          '${Config.baseUrl}/clink/api/community/upload_media.php', // Replace with actual upload URL
+        );
+
+        if (mediaUrl == null) {
+          throw Exception("Media upload failed");
+        }
       }
 
-      // Add post with content and media URL
-      await addPost('123', content, mediaUrl: mediaUrl);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Post added successfully!")),
-      );
-
-      _postController.clear();
-      setState(() {
-        _selectedMedia = null;
+      // Send post data including media URL if available
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}/clink/api/community/add_post.php'),
+        body: {
+          'user_id': userName,
+          'content': content,
+          'media_url': mediaUrl ?? '',
+        },
+      ).timeout(Duration(seconds: 10), onTimeout: () {
+        throw Exception("Request timed out");
       });
 
-      // Refresh media list
-      Provider.of<MediaProvider>(context, listen: false).loadMedia();
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Post added successfully!")),
+        );
+        _postController.clear();
+        setState(() {
+          _selectedMedia = null;
+        });
+        Provider.of<MediaProvider>(context, listen: false).loadPosts();
+      } else {
+        throw Exception(jsonResponse['message']);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to add post: $e")),
@@ -126,10 +156,7 @@ class _CommunityPostState extends State<CommunityPost> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: theme.appBarTheme.backgroundColor,
-        title: Text(
-          'Community Post',
-          style: theme.appBarTheme.titleTextStyle,
-        ),
+        title: Text('Community Post', style: theme.appBarTheme.titleTextStyle),
         actions: [
           IconButton(
             icon: Icon(Icons.upload_file, color: theme.colorScheme.onPrimary),
@@ -153,13 +180,14 @@ class _CommunityPostState extends State<CommunityPost> {
                     ? Center(child: CircularProgressIndicator())
                     : ListView.builder(
                         controller: _scrollController,
-                        itemCount: mediaProvider.mediaList.length,
-                        reverse: true, // Display latest posts first
+                        itemCount: mediaProvider.postList.length,
+                        reverse: true,
                         itemBuilder: (context, index) {
-                          final media = mediaProvider.mediaList[index];
+                          final post = mediaProvider.postList[index];
                           return PostCard(
-                            username: widget.username,
-                            imageUrl: media.fileUrl,
+                            username: post.username,
+                            content: post.content,
+                            imageUrl: post.mediaUrl,
                             likes: "${(index + 1) * 457}",
                             comments: "${(index + 1) * 10}",
                             theme: theme,
@@ -169,76 +197,75 @@ class _CommunityPostState extends State<CommunityPost> {
               ),
             ],
           ),
-          Positioned(
-            bottom: 16,
+          AnimatedPositioned(
+            duration: Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
+            top: _isUploadSectionVisible ? 16 : -300, // Moves out of view when hidden
             left: 16,
             right: 16,
-            child: Visibility(
-              visible: _isUploadSectionVisible,
-              child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: _postController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: "Write something...",
-                          filled: true,
-                          fillColor: theme.colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _postController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: "Write something...",
+                        filled: true,
+                        fillColor: theme.colorScheme.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      if (_selectedMedia != null) ...[
-                        Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                _selectedMedia!,
-                                height: 200,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned(
-                              right: 8,
-                              top: 8,
-                              child: IconButton(
-                                icon: Icon(Icons.close, color: Colors.white),
-                                onPressed: () => setState(() => _selectedMedia = null),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      Row(
+                    ),
+                    const SizedBox(height: 8),
+                    if (_selectedMedia != null) ...[
+                      Stack(
                         children: [
-                          IconButton(
-                            icon: Icon(Icons.photo_library),
-                            onPressed: _pickMedia,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              _selectedMedia!,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                          const Spacer(),
-                          ElevatedButton.icon(
-                            icon: Icon(Icons.send),
-                            label: Text('Post'),
-                            onPressed: _isPosting ? null : _handleAddPost,
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: IconButton(
+                              icon: Icon(Icons.close, color: Colors.white),
+                              onPressed: () => setState(() => _selectedMedia = null),
+                            ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 8),
                     ],
-                  ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.photo_library),
+                          onPressed: _pickMedia,
+                        ),
+                        const Spacer(),
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.send),
+                          label: Text('Post'),
+                          onPressed: _isPosting ? null : _handleAddPost,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -251,7 +278,8 @@ class _CommunityPostState extends State<CommunityPost> {
 
 class PostCard extends StatelessWidget {
   final String username;
-  final String imageUrl;
+  final String content;
+  final String? imageUrl;
   final String likes;
   final String comments;
   final ThemeData theme;
@@ -259,7 +287,8 @@ class PostCard extends StatelessWidget {
   const PostCard({
     Key? key,
     required this.username,
-    required this.imageUrl,
+    required this.content,
+    this.imageUrl,
     required this.likes,
     required this.comments,
     required this.theme,
@@ -268,9 +297,9 @@ class PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -285,18 +314,21 @@ class PostCard extends StatelessWidget {
               onPressed: () {},
             ),
           ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: FutureBuilder<File>(
-              future: DefaultCacheManager().getSingleFile(imageUrl),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+          if (imageUrl != null && imageUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: CachedNetworkImage(
+                imageUrl: imageUrl!,
+                placeholder: (context, url) {
+                  print("Loading image: $url"); // Debugging information
                   return Container(
                     height: 200,
                     color: theme.colorScheme.surface,
                     child: Center(child: CircularProgressIndicator()),
                   );
-                } else if (snapshot.hasError || !snapshot.hasData) {
+                },
+                errorWidget: (context, url, error) {
+                  print("Error loading image: $url, Error: $error"); // Debugging information
                   return Container(
                     height: 200,
                     color: theme.colorScheme.surface,
@@ -305,26 +337,25 @@ class PostCard extends StatelessWidget {
                           style: theme.textTheme.bodyLarge),
                     ),
                   );
-                } else {
-                  return Image.file(
-                    snapshot.data!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  );
-                }
-              },
+                },
+                fit: BoxFit.cover,
+                width: double.infinity,
+              ),
             ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Text(content, style: theme.textTheme.bodyMedium),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(Icons.favorite, color: Colors.red),
-                SizedBox(width: 8),
+                Icon(Icons.favorite, color: const Color.fromARGB(255, 235, 16, 0)),
+                const SizedBox(width: 8),
                 Text(likes, style: theme.textTheme.bodyMedium),
-                SizedBox(width: 24),
+                const SizedBox(width: 24),
                 Icon(Icons.comment),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(comments, style: theme.textTheme.bodyMedium),
               ],
             ),

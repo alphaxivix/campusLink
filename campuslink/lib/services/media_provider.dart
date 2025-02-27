@@ -1,23 +1,25 @@
+// filepath: /C:/project/c_link_newlatest/project/campuslink/lib/services/media_provider.dart
 import 'package:flutter/material.dart';
-import 'package:campuslink/services/fetch_media.dart';
+import 'package:campuslink/services/fetch_posts.dart';
 import 'package:campuslink/services/upload_media.dart';
 import 'dart:io';
+import 'package:campuslink/data/config.dart';
 
 class MediaProvider with ChangeNotifier {
-  List<Media> _mediaList = [];
+  List<Post> _postList = [];
   bool _isLoading = false;
 
-  List<Media> get mediaList => _mediaList;
+  List<Post> get postList => _postList;
   bool get isLoading => _isLoading;
 
-  Future<void> loadMedia() async { // Renamed function
+  Future<void> loadPosts() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _mediaList = await fetchMedia(); // Now it uses the correct function from fetch_media.dart
+      _postList = await fetchPosts();
     } catch (e) {
-      print("Failed to fetch media: $e");
+      print("Failed to fetch posts: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -28,16 +30,11 @@ class MediaProvider with ChangeNotifier {
     try {
       return await uploadFile(
         file.path,
-        'http://192.168.1.23/clink/api/community/upload_media.php',
+        '${Config.baseUrl}/clink/api/community/upload_media.php',
       );
     } catch (e) {
       print("Failed to upload media: $e");
       return null;
     }
-  }
-
-  void addMedia(Media media) {
-    _mediaList.insert(0, media);
-    notifyListeners();
   }
 }

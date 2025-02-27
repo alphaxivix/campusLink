@@ -1,6 +1,6 @@
-import 'package:campuslink/data/data_provider.dart';
+
 import 'package:campuslink/data/save_user_data.dart';
-import 'package:provider/provider.dart';
+import 'package:campuslink/data/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.3/clink/api/login.php'),
+      Uri.parse('${Config.baseUrl}/clink/api/login.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(requestBody),
     );

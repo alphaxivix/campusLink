@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
+import 'package:campuslink/data/config.dart';
 
 class SignupScreen extends StatefulWidget {
   final String userType;
@@ -31,7 +32,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _errorMessage = null;
     });
 
-    final url = Uri.parse('http://192.168.1.3/clink/api/admin_signup.php');
+    final url = Uri.parse('${Config.baseUrl}/clink/api/admin_signup.php');
     try {
       final response = await http.post(
         url,

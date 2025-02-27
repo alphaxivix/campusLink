@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:campuslink/data/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatbotManagementScreen extends StatefulWidget {
@@ -39,7 +40,7 @@ class _ChatbotManagementScreenState extends State<ChatbotManagementScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.3/clink/api/get_predefined_questions.php')
+        Uri.parse('${Config.baseUrl}/clink/api/get_predefined_questions.php')
       );
 
       if (response.statusCode == 200) {
@@ -67,7 +68,7 @@ void fetchAdminAnswers() async {
 
   try {
     final response = await http.get(
-      Uri.parse('http://192.168.1.3/clink/api/get_admin_answers.php?institution=$institution')
+      Uri.parse('${Config.baseUrl}/clink/api/get_admin_answers.php?institution=$institution')
     );
 
     if (response.statusCode == 200) {
@@ -97,7 +98,7 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
     };
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.3/clink/api/save_admin_answer.php'),
+      Uri.parse('${Config.baseUrl}/clink/api/save_admin_answer.php'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode(payload)
     );
@@ -414,7 +415,7 @@ void _showAddQuestionDialog() {
 Future<void> _savePredefinedQuestion(String category, String questionText, String keywords) async {
   try {
     final response = await http.post(
-      Uri.parse('http://192.168.1.3/clink/api/add_predefined_question.php'),
+      Uri.parse('${Config.baseUrl}/clink/api/add_predefined_question.php'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'category': category,
