@@ -5,10 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class LoginScreen extends StatefulWidget {
   final String userType;
-  const LoginScreen({Key? key, required this.userType}) : super(key: key);
+  const LoginScreen({super.key, required this.userType});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -24,6 +25,34 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool get _isAdminLogin => widget.userType.toLowerCase() == 'admin';
   bool get _isGuestLogin => widget.userType.toLowerCase() == 'guest';
+
+// Function to update FCM token in the database
+Future<void> updateFcmToken(String userId) async {
+  String? fcmToken = await FirebaseMessaging.instance.getToken();
+  if (fcmToken == null) {
+    print("FCM Token is null, skipping update.");
+    return;
+  }
+
+  try {
+    var response = await http.post(
+      Uri.parse("${Config.baseUrl}/clink/api/update_fcm_token.php"),
+      body: {
+        "username": userId, // Use username to update the FCM token
+        "fcm_token": fcmToken,
+      },
+    );
+
+    var responseData = json.decode(response.body);
+    if (responseData["success"]) {
+      print("FCM Token updated successfully!");
+    } else {
+      print("Failed to update FCM Token: ${responseData["message"]}");
+    }
+  } catch (e) {
+    print("Error updating FCM Token: $e");
+  }
+}
 
  Future<void> _validateAndLogin() async {
   setState(() {
@@ -90,6 +119,9 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.setString('userType', userType);
       await prefs.setString('institution', institution);
 
+      // Update FCM token after successful login
+      await updateFcmToken(userId);
+
       // Navigate to the main screen
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/main',
@@ -145,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Welcome back to CampusLink',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onBackground.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 48),
@@ -221,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         "Don't have an account? ",
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onBackground.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                       TextButton(

@@ -7,7 +7,7 @@ class ManageTeachersScreen extends StatefulWidget {
   final String userType;
   final String userId;
 
-  const ManageTeachersScreen({Key? key, required this.userType, required this.userId}) : super(key: key);
+  const ManageTeachersScreen({super.key, required this.userType, required this.userId});
 
   @override
   _ManageTeachersScreenState createState() => _ManageTeachersScreenState();
@@ -198,7 +198,7 @@ class TeacherCard extends StatelessWidget {
   final Teacher teacher;
   final String userType;
 
-  const TeacherCard({Key? key, required this.teacher, required this.userType}) : super(key: key);
+  const TeacherCard({super.key, required this.teacher, required this.userType});
 
   @override
   Widget build(BuildContext context) {

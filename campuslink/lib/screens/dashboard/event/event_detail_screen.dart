@@ -11,10 +11,10 @@ class EventDetailScreen extends StatefulWidget {
   final VoidCallback? onEventUpdated;
 
   const EventDetailScreen({
-    Key? key,
+    super.key,
     required this.eventId,
     this.onEventUpdated,
-  }) : super(key: key);
+  });
 
   @override
   _EventDetailScreenState createState() => _EventDetailScreenState();
@@ -405,11 +405,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: CircleAvatar(
+                    backgroundColor: theme.colorScheme.primary,
                     child: Text(
                       coordinator['name'][0].toUpperCase(),
                       style: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
-                    backgroundColor: theme.colorScheme.primary,
                   ),
                   title: Text(
                     coordinator['name'],

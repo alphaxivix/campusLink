@@ -7,10 +7,10 @@ class AttendanceReport extends StatefulWidget {
   final String studentId;
 
   const AttendanceReport({
-    Key? key,
+    super.key,
     required this.isStudent,
     required this.studentId,
-  }) : super(key: key);
+  });
 
   @override
   _AttendanceReportState createState() => _AttendanceReportState();
@@ -18,7 +18,7 @@ class AttendanceReport extends StatefulWidget {
 
 class _AttendanceReportState extends State<AttendanceReport> {
   DateTime _selectedDate = DateTime.now();
-  ScrollController _calendarScrollController = ScrollController();
+  final ScrollController _calendarScrollController = ScrollController();
 
   // Sample student data - Replace with your actual data model
   final Map<String, Map<String, dynamic>> _studentsAttendance = {
@@ -44,7 +44,7 @@ class _AttendanceReportState extends State<AttendanceReport> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
         title: Text(
@@ -634,7 +634,7 @@ class _AttendanceReportState extends State<AttendanceReport> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return DataTable(
-              headingRowColor: MaterialStateProperty.all(
+              headingRowColor: WidgetStateProperty.all(
                 theme.colorScheme.primary.withOpacity(0.1),
               ),
               columnSpacing: constraints.maxWidth * 0.05, // 5% of screen width

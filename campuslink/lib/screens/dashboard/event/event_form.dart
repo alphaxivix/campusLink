@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class EventForm extends StatefulWidget {
   final String? eventId; // Optional - if provided, we're editing an existing event
 
-  const EventForm({Key? key, this.eventId}) : super(key: key);
+  const EventForm({super.key, this.eventId});
 
   @override
   _EventFormState createState() => _EventFormState();

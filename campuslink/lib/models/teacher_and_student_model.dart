@@ -62,7 +62,7 @@ class Teacher {
     String? email,
   }) {
     return Teacher(
-      id: this.id,
+      id: id,
       name: name ?? this.name,
       username: username ?? this.username,
       password: password ?? this.password,
@@ -84,6 +84,7 @@ class Student {
   final String section;
   final String contact;
   final String email;
+  final String? fingerprintEnrolled;
 
   Student({
     required this.id,
@@ -94,6 +95,7 @@ class Student {
     required this.section,
     required this.contact,
     required this.email,
+    this.fingerprintEnrolled,
   });
 
  factory Student.fromJson(Map<String, dynamic> json) {
@@ -106,6 +108,7 @@ class Student {
     section: (json['section'] != null && json['section'].toString().trim().isNotEmpty) ? json['section'] : 'Not Assigned',
     contact: (json['contact'] != null && json['contact'].toString().trim().isNotEmpty) ? json['contact'] : 'No Contact',
     email: (json['email'] != null && json['email'].toString().trim().isNotEmpty) ? json['email'] : 'No Email',
+    fingerprintEnrolled: json['fingerprint_enrolled'], // Add this line
   );
 }
 
@@ -119,6 +122,7 @@ class Student {
       'section': section,
       'contact': contact,
       'email': email,
+      'fingerprint_enrolled': fingerprintEnrolled, // Add this line
     };
   }
 
@@ -130,9 +134,10 @@ class Student {
     String? section,
     String? contact,
     String? email,
+    String? fingerprintEnrolled, // Add this field
   }) {
     return Student(
-      id: this.id,
+      id: id,
       name: name ?? this.name,
       username: username ?? this.username,
       password: password ?? this.password,
@@ -140,6 +145,7 @@ class Student {
       section: section ?? this.section,
       contact: contact ?? this.contact,
       email: email ?? this.email,
+      fingerprintEnrolled: fingerprintEnrolled ?? this.fingerprintEnrolled, // Add this line
     );
   }
 }

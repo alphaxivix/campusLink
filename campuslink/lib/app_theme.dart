@@ -34,11 +34,9 @@ class AppTheme {
       tertiary: accentColor,
       error: errorColor,
       surface: darkSurface,
-      background: darkBackground,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.white,
-      onBackground: Colors.white,
       onError: Colors.white,
     ),
 
@@ -258,11 +256,9 @@ class AppTheme {
       tertiary: accentColor,
       error: errorColor,
       surface: lightSurface,
-      background: lightBackground,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Color(0xFF1E1E1E),
-      onBackground: Color(0xFF1E1E1E),
       onError: Colors.white,
     ),
 
@@ -538,14 +534,14 @@ class AppTheme {
 
     // Switch Theme
     switchTheme: SwitchThemeData(
-      thumbColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return primaryColor;
         }
         return Colors.grey[400];
       }),
-      trackColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return primaryColor.withOpacity(0.5);
         }
         return Colors.grey[300];
@@ -554,8 +550,8 @@ class AppTheme {
 
     // Checkbox Theme
     checkboxTheme: CheckboxThemeData(
-      fillColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return primaryColor;
         }
         return Colors.grey[400];
@@ -567,8 +563,8 @@ class AppTheme {
 
     // Radio Theme
     radioTheme: RadioThemeData(
-      fillColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return primaryColor;
         }
         return Colors.grey[400];

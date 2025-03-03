@@ -8,7 +8,7 @@ import 'package:campuslink/data/config.dart';
 
 class SignupScreen extends StatefulWidget {
   final String userType;
-  const SignupScreen({Key? key, required this.userType}) : super(key: key);
+  const SignupScreen({super.key, required this.userType});
 
   @override
   _SignupScreenState createState() => _SignupScreenState();
@@ -122,7 +122,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 Text(
                   'Join CampusLink today',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onBackground.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 48),

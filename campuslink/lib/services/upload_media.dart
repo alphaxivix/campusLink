@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'dart:convert';
-import 'dart:io' show HttpOverrides;
 
 class MyHttpOverrides extends HttpOverrides {
   @override

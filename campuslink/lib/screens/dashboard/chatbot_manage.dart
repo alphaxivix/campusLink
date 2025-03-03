@@ -8,9 +8,9 @@ class ChatbotManagementScreen extends StatefulWidget {
   final String adminId;
 
   const ChatbotManagementScreen({
-    Key? key,
+    super.key,
     required this.adminId,
-  }) : super(key: key);
+  });
 
   @override
   _ChatbotManagementScreenState createState() => _ChatbotManagementScreenState();
@@ -280,7 +280,7 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceVariant,
+                              color: theme.colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -333,8 +333,8 @@ Future<void> saveAdminAnswer(AdminAnswer answer) async {
             // Add this Floating Action Button in the build method's Scaffold
 floatingActionButton: FloatingActionButton(
   onPressed: _showAddQuestionDialog,
-  child: Icon(Icons.add),
   tooltip: 'Add Predefined Question',
+  child: Icon(Icons.add),
 ),
     );
   }

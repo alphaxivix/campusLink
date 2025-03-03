@@ -19,10 +19,10 @@ class UserDashboard extends StatefulWidget {
   final String userRole;
   
   const UserDashboard({
-    Key? key,
+    super.key,
     required this.userId,
     required this.userRole,
-  }) : super(key: key);
+  });
 
   static final StreamController<void> eventUpdateController = StreamController<void>.broadcast();
   
@@ -305,7 +305,7 @@ class _UserDashboardState extends State<UserDashboard> {
     final theme = Theme.of(context);
     
     return ListTile(
-      leading: Icon(icon, color: theme.colorScheme.onBackground),
+      leading: Icon(icon, color: theme.colorScheme.onSurface),
       title: Text(title, style: theme.textTheme.bodyLarge),
       onTap: onTap,
     ).animate().fadeIn().slideX();

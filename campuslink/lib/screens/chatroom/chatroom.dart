@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:async';
 import '../../widgets/profile.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Chatroom extends StatefulWidget {
+  const Chatroom({super.key});
+
   @override
   _ChatroomState createState() => _ChatroomState();
 }
 
 class _ChatroomState extends State<Chatroom> {
   final TextEditingController _controller = TextEditingController();
-  List<ChatMessage> _messages = [];
+  final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _isEmojiPickerVisible = false;
+  String? userData;
+  Timer? _timer;
 
   final List<String> _emojis = [
     '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', 
@@ -21,18 +29,70 @@ class _ChatroomState extends State<Chatroom> {
     '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮'
   ];
 
-  void _sendMessage() {
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+    _fetchMessages();
+    _startFetchingMessages();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userData = prefs.getString('userId');
+    });
+  }
+
+  Future<void> _fetchMessages() async {
+    final response = await http.get(Uri.parse('http://192.168.1.4/clink/api/chatroom/chats.php'));
+    if (response.statusCode == 200) {
+      final List<dynamic> messagesJson = json.decode(response.body);
+      setState(() {
+        _messages.clear();
+        for (var messageJson in messagesJson) {
+          _messages.add(ChatMessage(
+            text: messageJson['text'],
+            sender: messageJson['sender'],
+            timestamp: DateTime.parse(messageJson['timestamp']),
+          ));
+        }
+      });
+      _scrollToBottom();
+    } else {
+      throw Exception('Failed to load messages');
+    }
+  }
+
+  Future<void> _sendMessage() async {
     String message = _controller.text.trim();
     if (message.isNotEmpty) {
-      setState(() {
-        _messages.add(ChatMessage(
-          text: message,
-          sender: "You",
-          timestamp: DateTime.now(),
-        ));
-      });
-      _controller.clear();
-      _scrollToBottom();
+      final response = await http.post(
+        Uri.parse('http://192.168.1.4/clink/api/chatroom/chats.php'),
+        body: {
+          'text': message,
+          'sender': userData,
+        },
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: message,
+            sender: 'You',
+            timestamp: DateTime.now(),
+          ));
+        });
+        _controller.clear();
+        _scrollToBottom();
+      } else {
+        throw Exception('Failed to send message');
+      }
     }
   }
 
@@ -48,202 +108,251 @@ class _ChatroomState extends State<Chatroom> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Scaffold(
-      backgroundColor: theme.colorScheme.background,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: theme.colorScheme.surface,
-        title: Text(
-                  'Chatroom',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+  void _startFetchingMessages() {
+    _timer = Timer.periodic(Duration(seconds: 5), (timer) {
+      _fetchMessages();
+    });
+  }
+
+// ...existing code...
+
+@override
+Widget build(BuildContext context) {
+  final theme = Theme.of(context);
+  
+  return Scaffold(
+    backgroundColor: const Color(0xFF1A1D21), // Dark background
+    appBar: AppBar(
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      backgroundColor: const Color(0xFF252A34),
+      title: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: theme.colorScheme.primary,
+            child: const Icon(Icons.chat_bubble, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Campus Chat',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.account_circle, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
-              );
-            },
+              ),
+              Text(
+                '${_messages.length} messages',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.white70,
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      body: Column(
+      actions: [
+        IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.account_circle, color: theme.colorScheme.primary),
+          ),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ProfilePage()),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
+    ),
+    body: Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF252A34),
+            const Color(0xFF1A1D21),
+          ],
+        ),
+      ),
+      child: Column(
         children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                final showDate = index == 0 || 
-                    !_isSameDay(message.timestamp, _messages[index - 1].timestamp);
-                
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (showDate)
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
+          // Update the ListView.builder section in the build method
+Expanded(
+  child: ListView.builder(
+    reverse: false, // Change to false to show messages in correct order
+    controller: _scrollController,
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    itemCount: _messages.length,
+    itemBuilder: (context, index) {
+      final message = _messages[index];
+      final isMe = message.sender == userData;
+      final showDate = index == 0 || 
+          !_isSameDay(
+            message.timestamp,
+            _messages[index - 1].timestamp
+          );
+      
+      return Column(
+        children: [
+          if (showDate)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _formatDate(message.timestamp),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            ),
+          Align(
+            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              decoration: BoxDecoration(
+                color: isMe 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isMe ? 20 : 0),
+                  bottomRight: Radius.circular(isMe ? 0 : 20),
+                ),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isMe)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        message.sender,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  Text(
+                    message.text,
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatTime(message.timestamp),
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  ),
+),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF252A34),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                if (_isEmojiPickerVisible)
+                  Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1D21),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(8),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 8,
+                        childAspectRatio: 1,
+                      ),
+                      itemCount: _emojis.length,
+                      itemBuilder: (context, index) => InkWell(
+                        onTap: () {
+                          _controller.text += _emojis[index];
+                          setState(() => _isEmojiPickerVisible = false);
+                        },
                         child: Center(
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              _formatDate(message.timestamp),
-                              style: theme.textTheme.bodySmall,
+                          child: Text(_emojis[index], style: const TextStyle(fontSize: 24)),
+                        ),
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.emoji_emotions,
+                          color: theme.colorScheme.primary,
+                        ),
+                        onPressed: () => setState(() => _isEmojiPickerVisible = !_isEmojiPickerVisible),
+                      ),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: TextField(
+                            controller: _controller,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText: 'Type a message...',
+                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                             ),
                           ),
                         ),
                       ),
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                            child: Icon(
-                              Icons.person,
-                              size: 20,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      message.sender,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      _formatTime(message.timestamp),
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onBackground.withOpacity(0.5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  margin: EdgeInsets.only(top: 4),
-                                  padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    message.text,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white),
+                          onPressed: _sendMessage,
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          if (_isEmojiPickerVisible)
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: GridView.builder(
-                padding: EdgeInsets.all(8),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 8,
-                  childAspectRatio: 1,
-                ),
-                itemCount: _emojis.length,
-                itemBuilder: (context, index) {
-                  return InkWell(
-                    onTap: () {
-                      _controller.text += _emojis[index];
-                      setState(() {
-                        _isEmojiPickerVisible = false;
-                      });
-                    },
-                    child: Center(
-                      child: Text(_emojis[index], style: TextStyle(fontSize: 24)),
-                    ),
-                  );
-                },
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Input Field
-                TextField(
-                  controller: _controller,
-                  cursorColor: Theme.of(context).colorScheme.primary,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                  decoration: InputDecoration(
-                    hintText: 'Say something...',
-                    hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                    filled: true,
-                    fillColor: Theme.of(context).cardColor,
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: 10.0,
-                      horizontal: 50.0,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-                    ),
-                  ),
-                ),
-                // Emoji Picker Icon
-                Positioned(
-                  left: 10.0,
-                  child: IconButton(
-                    icon: Icon(Icons.emoji_emotions, color: const Color.fromARGB(255, 52, 93, 138)),
-                    onPressed: () {
-                      setState(() {
-                        _isEmojiPickerVisible = !_isEmojiPickerVisible;
-                      });
-                    },
-                  ),
-                ),
-                // Send Button
-                Positioned(
-                  right: 10.0,
-                  child: IconButton(
-                    icon: Icon(Icons.send, color: const Color.fromARGB(255, 52, 93, 138)),
-                    onPressed: _sendMessage,
+                    ],
                   ),
                 ),
               ],
@@ -251,8 +360,10 @@ class _ChatroomState extends State<Chatroom> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+// ...existing code...
 
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&

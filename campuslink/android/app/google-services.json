@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "74386787122",
+    "firebase_url": "https://campuslink-a4cdb-default-rtdb.firebaseio.com",
+    "project_id": "campuslink-a4cdb",
+    "storage_bucket": "campuslink-a4cdb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:74386787122:android:47241e6fa5127c6ab4e52b",
+        "android_client_info": {
+          "package_name": "com.example.campuslink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUd0QSMhR8iAq3nVUL2xZ20cVZzvwaQ9g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

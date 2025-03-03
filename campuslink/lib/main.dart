@@ -12,24 +12,71 @@ import 'package:campuslink/widgets/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:campuslink/services/media_provider.dart';
-import 'package:campuslink/services/my_http_overrides.dart'; // Import the file where MyHttpOverrides is defined
+import 'package:campuslink/services/my_http_overrides.dart';
 import 'dart:io';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:campuslink/services/firebase_api.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
-void main() {
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("📩 Background Message Received: ${message.notification?.title}");
+}
+
+void main() async {
   HttpOverrides.global = MyHttpOverrides();
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await FirebaseAPI.initFCM();
+
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission();
+
+  String? token = await messaging.getToken();
+  print("🔥 FCM Token: $token");
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => DataProvider()),
         ChangeNotifierProvider(create: (_) => MediaProvider()),
-        // Add other providers here if needed
       ],
       child: CampusLinkApp(),
     ),
   );
 }
 
-class CampusLinkApp extends StatelessWidget {
+class CampusLinkApp extends StatefulWidget {
+  const CampusLinkApp({super.key});
+
+  @override
+  _CampusLinkAppState createState() => _CampusLinkAppState();
+}
+
+class _CampusLinkAppState extends State<CampusLinkApp> {
+  @override
+  void initState() {
+    super.initState();
+    setupFirebaseNotifications();
+  }
+
+  void setupFirebaseNotifications() async {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("📩 Foreground Notification: ${message.notification?.title}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("${message.notification?.title} - ${message.notification?.body}"),
+        ),
+      );
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print("📲 Notification Clicked: ${message.notification?.title}");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -38,32 +85,24 @@ class CampusLinkApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: SplashScreen(), // Use SplashScreen as home
+      home: SplashScreen(),
       routes: {
         '/homeScreen': (context) => HomeScreen(),
-        // Admin Flow
         '/adminLogin': (context) => LoginScreen(userType: "Admin"),
         '/adminSignup': (context) => SignupScreen(userType: "Admin"),
         '/admin_community_post': (context) => CommunityPost(username: 'Admin'),
         '/admin_chatbot': (context) => Chatbot(),
         '/adminProfile': (context) => ProfilePage(),
-
-        // Teacher Flow
         '/teacherLogin': (context) => LoginScreen(userType: 'Teacher'),
         '/teacherCommunityPost': (context) => CommunityPost(username: 'Teacher'),
         '/teacherChatroom': (context) => Chatroom(),
         '/teacherChatbot': (context) => Chatbot(),
         '/teacherProfile': (context) => ProfilePage(),
-
-        // Student Flow
         '/studentLogin': (context) => LoginScreen(userType: "Student"),
-        // '/studentAttendanceReport': (context) => (),
         '/studentCommunityPost': (context) => CommunityPost(username: 'Student'),
         '/studentChatroom': (context) => Chatroom(),
         '/studentChatbot': (context) => Chatbot(),
         '/studentProfile': (context) => ProfilePage(),
-
-        // Guest Flow
         '/guestLogin': (context) => LoginScreen(userType: 'Guest'),
         '/guestCommunityPost': (context) => CommunityPost(username: 'Guest'),
         '/guestChatbot': (context) => Chatbot(),

@@ -9,7 +9,7 @@ import 'package:campuslink/data/config.dart';
 import '../../../app_theme.dart';
 
 class EventListScreen extends StatefulWidget {
-  const EventListScreen({Key? key}) : super(key: key);
+  const EventListScreen({super.key});
 
   @override
   _EventListScreenState createState() => _EventListScreenState();
@@ -145,7 +145,7 @@ Future<void> _deleteEvent(String id) async {
     print('Event ID: $id');
     print('Institution: $institution');
 
-    final url = '$baseUrl';
+    final url = baseUrl;
     print('Deleting event with URL: $url');
 
     final response = await http.delete(
@@ -272,7 +272,7 @@ Future<void> _deleteEvent(String id) async {
           child: Text(
             timeStatus,
             style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onBackground,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
@@ -295,9 +295,9 @@ Future<void> _deleteEvent(String id) async {
             UserDashboard.eventUpdateController.add(null);
           }
         },
-        child: const Icon(Icons.add),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
+        child: const Icon(Icons.add),
       ),
 
     );
