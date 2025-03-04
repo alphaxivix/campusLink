@@ -1,9 +1,24 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiService {
-  final String geminiApiKey = 'AIzaSyBBbmcaiihJpC2CYjeXuDAvQzMKP87xs-A';
-  final String apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=';
+  late final String geminiApiKey;
+  final String apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
+
+  // Constructor that initializes the API key from environment variables
+  GeminiService() {
+    // Try to get API key from .env file, with a fallback empty string
+    try {
+      geminiApiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+      if (geminiApiKey.isEmpty) {
+        print('WARNING: GEMINI_API_KEY not found in environment variables');
+      }
+    } catch (e) {
+      print('ERROR: Could not initialize dotenv - $e');
+      geminiApiKey = '';
+    }
+  }
 
   // This method transforms text into a more structured format
   static String _transformText(String text) {
@@ -18,11 +33,15 @@ class GeminiService {
 
   // AI Response Method with Enhanced Processing
   Future<String> sendMessage(String prompt, String institution) async {
+    if (geminiApiKey.isEmpty) {
+      return 'Error: Gemini API key not configured. Please check your environment variables.';
+    }
+    
     prompt = prompt.toLowerCase().trim();
 
     try {
       // Fetching answers related to the institution
-      final apiUrl = 'http://192.168.1.4/clink/api/chatbot.php'; // Replace with your API URL
+      final apiUrl = 'http://192.168.1.77/clink/api/chatbot.php'; // Replace with your API URL
       final response = await http.get(Uri.parse('$apiUrl?institution=$institution'));
 
       if (response.statusCode == 200) {
@@ -35,7 +54,7 @@ class GeminiService {
               .join("\n\n");
 
           // Generate a prompt for Gemini API based on the fetched answers
-          final geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$geminiApiKey';
+          final geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiApiKey';
           final response = await http.post(
             Uri.parse(geminiApiUrl),
             headers: {"Content-Type": "application/json"},
