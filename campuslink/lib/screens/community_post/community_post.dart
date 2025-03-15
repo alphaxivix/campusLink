@@ -14,7 +14,7 @@ import 'package:campuslink/data/config.dart';
 class CommunityPost extends StatefulWidget {
   final String username;
 
-  const CommunityPost({Key? key, required this.username}) : super(key: key);
+  const CommunityPost({super.key, required this.username});
 
   @override
   _CommunityPostState createState() => _CommunityPostState();
@@ -285,14 +285,14 @@ class PostCard extends StatelessWidget {
   final ThemeData theme;
 
   const PostCard({
-    Key? key,
+    super.key,
     required this.username,
     required this.content,
     this.imageUrl,
     required this.likes,
     required this.comments,
     required this.theme,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

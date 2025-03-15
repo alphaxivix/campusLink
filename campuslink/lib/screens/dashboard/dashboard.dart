@@ -13,6 +13,7 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:campuslink/data/config.dart';
+import 'package:campuslink/screens/dashboard/student_attendance_report.dart';
 
 class UserDashboard extends StatefulWidget {
   final String userId;
@@ -126,6 +127,7 @@ class _UserDashboardState extends State<UserDashboard> {
 
       print('Response status code: ${response.statusCode}');
       print('Response body: ${response.body}');
+      print('Institution: $institution');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
@@ -512,56 +514,58 @@ Widget _buildAnimatedActionCard(String title, IconData icon, Color color, Widget
   }
 
   List<Widget> _getQuickActionsByRole() {
-    final actions = <Widget>[];
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-    
-    final roleActions = {
-      'admin': [
-        ('Manage Students', Icons.people_outline, 
-          isDarkMode ? theme.colorScheme.primary : const Color(0xFF6C63FF), 
-          ManageStudentsScreen(userType: widget.userRole, userId: widget.userId,)),
-        ('Manage Teachers', Icons.person, 
-          isDarkMode ? theme.colorScheme.secondary : const Color(0xFF03DAC6), 
-          ManageTeachersScreen(userType: widget.userRole, userId: widget.userId,)),
-        ('Attendance', Icons.check_circle_outline, 
-          isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
-          AttendanceReport(isStudent: false, studentId: widget.userId,)),
-        ('Manage Chatbot', Icons.smart_toy, 
-          isDarkMode ? theme.colorScheme.tertiary : const Color(0xFFFFA62B), 
-          ChatbotManagementScreen(adminId: widget.userId)),
-        ('Manage Events', Icons.event_note, 
-          isDarkMode ? theme.colorScheme.secondary : const Color(0xFF4CAF50), 
-          EventListScreen()),
-      ],
-      'teacher': [
-        ('Manage Students', Icons.people_outline, 
-          isDarkMode ? theme.colorScheme.primary : const Color(0xFF6C63FF), 
-          ManageStudentsScreen(userType: widget.userRole, userId: widget.userId,)),
-        ('Attendance', Icons.check_circle_outline, 
-          isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
-          AttendanceReport(isStudent: false, studentId: widget.userId,)),
-        ('Manage Events', Icons.event_note, 
-          isDarkMode ? theme.colorScheme.secondary : const Color(0xFF4CAF50), 
-          EventListScreen()),
-      ],
-      'student': [
-        ('Attendance', Icons.check_circle_outline, 
-          isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
-          AttendanceReport(isStudent: true, studentId: widget.userId,)),
-      ],
-    };
+  final actions = <Widget>[];
+  final theme = Theme.of(context);
+  final isDarkMode = theme.brightness == Brightness.dark;
 
-    final currentRoleActions = roleActions[widget.userRole.toLowerCase()] ?? [];
-    
-    for (var i = 0; i < currentRoleActions.length; i++) {
-      final (title, icon, color, screen) = currentRoleActions[i];
-      actions.add(
-        _buildAnimatedActionCard(title, icon, color, screen),
-      );
-    }
+  final roleActions = {
+    'admin': [
+      ['Manage Students', Icons.people_outline, 
+        isDarkMode ? theme.colorScheme.primary : const Color(0xFF6C63FF), 
+        ManageStudentsScreen(userType: widget.userRole, userId: widget.userId)],
+      ['Manage Teachers', Icons.person, 
+        isDarkMode ? theme.colorScheme.secondary : const Color(0xFF03DAC6), 
+        ManageTeachersScreen(userType: widget.userRole, userId: widget.userId)],
+      ['Attendance', Icons.check_circle_outline, 
+        isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
+        AttendanceReport()], // ✅ No studentId here
+      ['Manage Chatbot', Icons.smart_toy, 
+        isDarkMode ? theme.colorScheme.tertiary : const Color(0xFFFFA62B), 
+        ChatbotManagementScreen(adminId: widget.userId)],
+      ['Manage Events', Icons.event_note, 
+        isDarkMode ? theme.colorScheme.secondary : const Color(0xFF4CAF50), 
+        EventListScreen()],
+    ],
+    'teacher': [
+      ['Manage Students', Icons.people_outline, 
+        isDarkMode ? theme.colorScheme.primary : const Color(0xFF6C63FF), 
+        ManageStudentsScreen(userType: widget.userRole, userId: widget.userId)],
+      ['Attendance', Icons.check_circle_outline, 
+        isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
+        AttendanceReport()], // ✅ No studentId here
+      ['Manage Events', Icons.event_note, 
+        isDarkMode ? theme.colorScheme.secondary : const Color(0xFF4CAF50), 
+        EventListScreen()],
+    ],
+    'student': [
+      ['Attendance', Icons.check_circle_outline, 
+        isDarkMode ? theme.colorScheme.error : const Color(0xFFFF6B6B), 
+        StudentAttendanceReport(studentId: widget.userId)], // ✅ Students go to student view
+    ],
+  };
 
-    return actions;
+  final currentRoleActions = roleActions[widget.userRole.toLowerCase()] ?? [];
+
+  for (var i = 0; i < currentRoleActions.length; i++) {
+    final title = currentRoleActions[i][0] as String;
+    final icon = currentRoleActions[i][1] as IconData;
+    final color = currentRoleActions[i][2] as Color;
+    final screen = currentRoleActions[i][3] as Widget;
+
+    actions.add(_buildAnimatedActionCard(title, icon, color, screen));
   }
+
+  return actions;
+}
 
 }

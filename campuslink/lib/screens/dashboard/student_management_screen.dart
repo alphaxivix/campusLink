@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:campuslink/data/config.dart';
 
 class ManageStudentsScreen extends StatefulWidget {
   final String userType;
@@ -423,7 +424,7 @@ class StudentCard extends StatelessWidget {
   }
 
   Future<void> _enrollFingerprint(String studentId) async {
-    const String apiUrl = "http://192.168.1.5/setStudentID";
+    const String apiUrl = "${Config.nodeUrl}/setStudentID";
     try {
       final response = await http.post(
         Uri.parse(apiUrl),
@@ -476,7 +477,7 @@ class _FingerprintEnrollmentScreenState extends State<FingerprintEnrollmentScree
     try {
       print("Sending student ID: ${widget.studentId}");
       final response = await http.post(
-        Uri.parse('http://192.168.1.5/setStudentID'),
+        Uri.parse('${Config.nodeUrl}/setStudentID'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -521,7 +522,7 @@ class _FingerprintEnrollmentScreenState extends State<FingerprintEnrollmentScree
       attempts++;
 
       try {
-        final response = await http.get(Uri.parse('http://192.168.1.5/enrollment-status'));
+        final response = await http.get(Uri.parse('${Config.nodeUrl}/enrollment-status'));
         if (response.statusCode == 200) {
           var result = json.decode(response.body);
           setState(() {

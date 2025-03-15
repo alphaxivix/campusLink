@@ -475,10 +475,12 @@ class PredefinedQuestion {
 
   factory PredefinedQuestion.fromJson(Map<String, dynamic> json) {
   return PredefinedQuestion(
-    id: json['id'],
-    category: json['category'],
-    questionText: json['question_text'],
-    keywords: json['keywords'].toString().split(','),
+    id: json['id'].toString(),  // Convert to String
+    category: json['category'].toString(),  // Convert to String
+    questionText: json['question_text'].toString(),  // Convert to String
+    keywords: json['keywords'] is String
+        ? json['keywords'].split(',')
+        : List<String>.from(json['keywords'].map((e) => e.toString())), // Convert JSON array
   );
 }
 
@@ -499,9 +501,9 @@ class AdminAnswer {
 
   factory AdminAnswer.fromJson(Map<String, dynamic> json) {
     return AdminAnswer(
-      id: json['id'],
-      questionId: json['question_id'],
-      answer: json['answer'],
+      id: json['id'].toString(),
+      questionId: json['question_id'].toString(),
+      answer: json['answer'].toString(),
       active: json['active'] == 1,
     );
   }

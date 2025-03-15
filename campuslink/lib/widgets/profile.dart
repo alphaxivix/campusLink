@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../services/profile_services.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -13,6 +14,9 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool _isEditing = false;
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _institutionController = TextEditingController();
+  final ProfileService _profileService = ProfileService();
   bool _obscurePassword = true;
   String? _profileImagePath;
   final ImagePicker _picker = ImagePicker();
@@ -20,10 +24,11 @@ class _ProfilePageState extends State<ProfilePage> {
   // User data fetched from SharedPreferences
   Map<String, String> userData = {
     'name': '',
-    'university': '',
+    'institution': '',
     'password': '',
     'email': '',
     'studentId': '',
+    'profile_image': '',
   };
 
   @override
@@ -33,17 +38,27 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userData = {
-        'name': prefs.getString('userId') ?? 'Unknown User',
-        'university': prefs.getString('institution') ?? 'Unknown Institution',
-        'password': prefs.getString('password') ?? '••••••••',
-        'email': prefs.getString('email') ?? 'No Email Found',
-        'studentId': prefs.getString('userId') ?? 'No ID Found',
-      };
-    });
+  final prefs = await SharedPreferences.getInstance();
+  final storedUserId = prefs.getString('userId');
+
+  print('Stored User ID: $storedUserId'); // Debugging output
+
+  if (storedUserId != null) {
+    final fetchedUserData = await _profileService.fetchUserProfile(storedUserId);
+
+    print('Fetched User Data in ProfilePage: $fetchedUserData'); // Debugging output
+
+    if (fetchedUserData.isNotEmpty) {
+      setState(() {
+        userData = fetchedUserData;
+        _profileImagePath = userData['profile_image']?.isNotEmpty == true ? userData['profile_image'] : null;
+      });
+
+      print('Updated Profile Image Path: $_profileImagePath'); // Debugging output
+    }
   }
+}
+
 
   Future<void> _pickImage() async {
     try {
@@ -78,24 +93,70 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _toggleEditMode() async {
-    setState(() {
-      _isEditing = !_isEditing;
-    });
+  void _initializeControllers() {
+    _emailController.text = userData['email'] ?? '';
+    _institutionController.text = userData['institution'] ?? '';
+    _passwordController.text = '';  // Keep password empty for security
+  }
 
-    // Save changes when exiting edit mode
-    if (!_isEditing) {
-      final prefs = await SharedPreferences.getInstance();
-      if (_passwordController.text.isNotEmpty) {
-        await prefs.setString('password', _passwordController.text);
-        userData['password'] = _passwordController.text;
-      }
-      _passwordController.clear();
+  Future<void> _toggleEditMode() async {
+  if (_isEditing) {
+    final prefs = await SharedPreferences.getInstance();
+    final String? storedUserId = prefs.getString('userId');
+
+    if (storedUserId == null || storedUserId.isEmpty) {
+      print('Error: User ID is null. Cannot update profile.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: User ID not found. Please log in again.')),
+      );
+      return;
+    }
+
+    // Capture updated values
+    final String updatedPassword = _passwordController.text.trim();
+    final String updatedEmail = _emailController.text.trim();
+    final String updatedInstitution = _institutionController.text.trim();
+
+    print('Updating profile...');
+    print('User ID: $storedUserId');
+    print('Password: $updatedPassword');
+    print('Email: $updatedEmail');
+    print('Institution: $updatedInstitution');
+    print('Profile Image Path: $_profileImagePath');
+
+    // Call API to update profile
+    final success = await _profileService.updateProfile(
+      userId: storedUserId,
+      password: updatedPassword.isNotEmpty ? updatedPassword : null,
+      email: updatedEmail.isNotEmpty ? updatedEmail : null,
+      institution: updatedInstitution.isNotEmpty ? updatedInstitution : null,
+      profileImage: (_profileImagePath != null && !_profileImagePath!.startsWith('http'))
+          ? File(_profileImagePath!)
+          : null, // Only upload local images
+    );
+
+    if (success) {
+      print('Profile updated successfully!');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully')),
       );
+      await loadUserData(); // Refresh profile data
+    } else {
+      print('Failed to update profile.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update profile')),
+      );
     }
+  } else {
+    _initializeControllers();
   }
+
+  setState(() {
+    _isEditing = !_isEditing;
+  });
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -160,17 +221,32 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     child: ClipOval(
-                      child: _profileImagePath != null
-                          ? Image.file(
-                              File(_profileImagePath!),
-                              fit: BoxFit.cover,
-                            )
-                          : Icon(
-                              Icons.person,
-                              size: 80,
-                              color: theme.colorScheme.primary,
-                            ),
-                    ),
+  child: _profileImagePath != null && _profileImagePath!.isNotEmpty
+      ? (_profileImagePath!.startsWith('http')
+          ? Image.network(
+              _profileImagePath!,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,  // Improve rendering quality
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(Icons.person, size: 80, color: Theme.of(context).colorScheme.primary);
+              },
+            )
+
+          : Image.file(
+              File(_profileImagePath!),
+              fit: BoxFit.cover,
+            ))
+      : Icon(
+          Icons.person,
+          size: 80,
+          color: theme.colorScheme.primary,
+        ),
+),
+
                   ),
                   if (_isEditing)
                     Positioned(
@@ -220,94 +296,121 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Update _buildDetailCards method to include editable fields
   List<Widget> _buildDetailCards(ThemeData theme) {
-    final List<Map<String, dynamic>> details = [
-      {'icon': Icons.person, 'title': 'User ID', 'value': userData['name']!},
-      {'icon': Icons.lock, 'title': 'Password', 'value': userData['password']!, 'isPassword': true},
-      {'icon': Icons.school, 'title': 'Institution', 'value': userData['university']!},
-      {'icon': Icons.email, 'title': 'Email', 'value': userData['email']!},
-      {'icon': Icons.badge, 'title': 'Student ID', 'value': userData['studentId']!},
-    ];
+  final List<Map<String, dynamic>> details = [
+    {
+      'icon': Icons.person,
+      'title': 'User ID',
+      'value': userData['name'] ?? '',
+      'readonly': true,  // Explicitly setting default
+      'isPassword': false,
+    },
+    {
+      'icon': Icons.lock,
+      'title': 'Password',
+      'value': userData['password'] ?? '',
+      'isPassword': true,
+      'controller': _passwordController,
+    },
+    {
+      'icon': Icons.school,
+      'title': 'Institution',
+      'value': userData['institution'] ?? '',
+      'isPassword': false,
+      'controller': _institutionController,
+    },
+    {
+      'icon': Icons.email,
+      'title': 'Email',
+      'value': userData['email'] ?? '',
+      'isPassword': false,
+      'controller': _emailController,
+    },
+  ];
 
-    return details.map((detail) {
-      return Container(
-        margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        padding: EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: Offset(0, 2),
+  return details.map((detail) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                detail['icon'] as IconData,
-                color: theme.colorScheme.primary,
-                size: 24,
-              ),
+            child: Icon(
+              detail['icon'] as IconData,
+              color: theme.colorScheme.primary,
+              size: 24,
             ),
-            SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    detail['title'] as String,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  SizedBox(height: 5),
-
-                  // Editable TextFields for editing
-                  if (_isEditing && detail['isPassword'] == true)
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        hintText: 'Enter new password',
-                      ),
-                    )
-                  else
-                    Text(
-                      detail['value'] as String,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  detail['title'] as String,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 5),
+                if (_isEditing && !(detail['readonly'] ?? false)) // Ensure `readonly` is never null
+                  TextField(
+                    controller: detail.containsKey('controller') ? detail['controller'] : null,
+                    obscureText: (detail['isPassword'] ?? false) && _obscurePassword, // Ensure `isPassword` is never null
+                    decoration: InputDecoration(
+                      hintText: 'Enter new ${detail['title']}',
+                      suffixIcon: (detail['isPassword'] ?? false)
+                          ? IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            )
+                          : null,
                     ),
-                ],
-              ),
+                  )
+                else
+                  Text(
+                    detail['value'] ?? '',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+              ],
             ),
-          ],
-        ),
-      );
-    }).toList();
-  }
+          ),
+        ],
+      ),
+    );
+  }).toList();
+}
+
 
   @override
   void dispose() {
     _passwordController.dispose();
+    _emailController.dispose();
+    _institutionController.dispose();
     super.dispose();
   }
 }

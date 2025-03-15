@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:campuslink/data/config.dart';
 
 class GeminiService {
-  final String geminiApiKey = 'AIzaSyBBbmcaiihJpC2CYjeXuDAvQzMKP87xs-A';
-  final String apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=';
+  final String geminiApiKey = 'AIzaSyBbFFXFl2va_2GnxZUm6ZBWZyu0bpFpNlM';
+  final String apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-001:generateContent?key=';
 
   // This method transforms text into a more structured format
   static String _transformText(String text) {
     return text
-        .replaceAllMapped(RegExp(r'\*\*(.*?)\*\*'), (match) => '`' + match.group(1)! + '`')
+        .replaceAllMapped(RegExp(r'\*\*(.*?)\*\*'), (match) => '`${match.group(1)!}`')
         .replaceAllMapped(RegExp(r'^\* ', multiLine: true), (match) => '• ')
         .replaceAllMapped(
             RegExp(r'```(.*?)```', dotAll: true),
@@ -22,11 +23,12 @@ class GeminiService {
 
     try {
       // Fetching answers related to the institution
-      final apiUrl = 'http://192.168.1.4/clink/api/chatbot.php'; // Replace with your API URL
+      final apiUrl = '${Config.baseUrl}/clink/api/chatbot.php'; // Replace with your API URL
       final response = await http.get(Uri.parse('$apiUrl?institution=$institution'));
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
+        print('server answers response: $responseBody'); // Debug print
 
         if (responseBody['success'] == true) {
           List<dynamic> answers = responseBody['answers'];
@@ -35,7 +37,7 @@ class GeminiService {
               .join("\n\n");
 
           // Generate a prompt for Gemini API based on the fetched answers
-          final geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$geminiApiKey';
+          final geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-001:generateContent?key=$geminiApiKey';
           final response = await http.post(
             Uri.parse(geminiApiUrl),
             headers: {"Content-Type": "application/json"},

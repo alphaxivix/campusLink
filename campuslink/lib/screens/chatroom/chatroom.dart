@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:async';
 import '../../widgets/profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:campuslink/data/config.dart';
+import 'package:campuslink/data/config.dart';
 
 class Chatroom extends StatefulWidget {
   const Chatroom({super.key});
@@ -51,7 +53,7 @@ class _ChatroomState extends State<Chatroom> {
   }
 
   Future<void> _fetchMessages() async {
-    final response = await http.get(Uri.parse('http://192.168.1.4/clink/api/chatroom/chats.php'));
+    final response = await http.get(Uri.parse('${Config.baseUrl}/clink/api/chatroom/chats.php'));
     if (response.statusCode == 200) {
       final List<dynamic> messagesJson = json.decode(response.body);
       setState(() {
@@ -74,7 +76,7 @@ class _ChatroomState extends State<Chatroom> {
     String message = _controller.text.trim();
     if (message.isNotEmpty) {
       final response = await http.post(
-        Uri.parse('http://192.168.1.4/clink/api/chatroom/chats.php'),
+        Uri.parse('${Config.baseUrl}/clink/api/chatroom/chats.php'),
         body: {
           'text': message,
           'sender': userData,
@@ -132,7 +134,7 @@ Widget build(BuildContext context) {
             backgroundColor: theme.colorScheme.primary,
             child: const Icon(Icons.chat_bubble, color: Colors.white),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 15),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -229,7 +231,7 @@ Expanded(
               decoration: BoxDecoration(
                 color: isMe 
                     ? Theme.of(context).colorScheme.primary 
-                    : Colors.white.withOpacity(0.1),
+                    : const Color.fromARGB(255, 5, 155, 255).withOpacity(0.1),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -243,11 +245,11 @@ Expanded(
                 children: [
                   if (!isMe)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.only(bottom: 10),
                       child: Text(
                         message.sender,
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: const Color.fromARGB(179, 255, 222, 5),
                           fontWeight: FontWeight.bold,
                         ),
                       ),

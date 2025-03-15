@@ -2,29 +2,61 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/profile.dart';
 import 'google_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 
 class Chatbot extends StatefulWidget {
-  const Chatbot({Key? key}) : super(key: key);
+  const Chatbot({super.key});
   
   @override
   _ChatbotState createState() => _ChatbotState();
 }
 
-class _ChatbotState extends State<Chatbot> {
+class _ChatbotState extends State<Chatbot>  with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GeminiService _geminiService = GeminiService();
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
   
   String _institution = '';
   List<Map<String, String>> _messages = [];
   bool _isLoading = false;
-  List<Map<String, dynamic>> _chatHistory = [];
+  final List<Map<String, dynamic>> _chatHistory = [];
   int _currentChatIndex = -1;
+
+  Widget _buildMessageList(ThemeData theme) {
+  return ListView.builder(
+    controller: _scrollController,
+    padding: const EdgeInsets.all(16.0),
+    itemCount: _messages.length,
+    itemBuilder: (context, index) {
+      final message = _messages[index];
+      return MessageBubble(
+        message: message['content'] ?? '',
+        sender: message['sender'] ?? '',
+        theme: theme,
+      );
+    },
+  );
+}
 
   @override
   void initState() {
     super.initState();
     _loadInstitution();
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOut,
+    ));
+    _slideController.forward();
   }
 
   Future<void> _loadInstitution() async {
@@ -38,17 +70,19 @@ class _ChatbotState extends State<Chatbot> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   void _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
-
+  
     if (_institution.isEmpty) {
       _addMessage('system', 'Institution information not available. Please set up your profile first.');
       return;
     }
+  print('Sending message: $message to institution: $_institution'); // Debug print
 
     setState(() {
       _isLoading = true;
@@ -122,147 +156,299 @@ class _ChatbotState extends State<Chatbot> {
     });
     Navigator.pop(context);
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Scaffold(
-      drawer: _buildDrawer(theme),
-      appBar: AppBar(
-        title: const Text('Campus Assistant'),
-        elevation: 2,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ProfilePage()),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _buildMessageList(theme),
-          ),
-          if (_isLoading)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: LinearProgressIndicator(
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-              ),
-            ),
-          _buildMessageInput(theme),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDrawer(ThemeData theme) {
-    return Drawer(
-      child: Column(
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
-            ),
-            child: Center(
-              child: Text(
-                "Conversations",
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: theme.colorScheme.onPrimary,
-                ),
+  return Drawer(
+    child: Column(
+      children: [
+        DrawerHeader(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary,
+          ),
+          child: Center(
+            child: Text(
+              "Chat History",
+              style: GoogleFonts.poppins(
+                color: theme.colorScheme.onPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.add_circle_outline),
-            title: const Text('New Conversation'),
-            onTap: _startNewChat,
+        ),
+        ListTile(
+          leading: const Icon(Icons.add),
+          title: Text(
+            'New Chat',
+            style: GoogleFonts.poppins(),
           ),
-          const Divider(),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _chatHistory.length,
-              itemBuilder: (context, index) => ListTile(
-                selected: index == _currentChatIndex,
+          onTap: _startNewChat,
+        ),
+        const Divider(),
+        Expanded(
+          child: ListView.builder(
+            itemCount: _chatHistory.length,
+            itemBuilder: (context, index) {
+              return ListTile(
                 leading: const Icon(Icons.chat_bubble_outline),
-                title: Text(_chatHistory[index]['title']),
+                title: Text(
+                  _chatHistory[index]['title'].toString(),
+                  style: GoogleFonts.poppins(),
+                ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline),
+                  icon: const Icon(Icons.delete),
                   onPressed: () => _deleteChat(index),
                 ),
+                selected: index == _currentChatIndex,
                 onTap: () => _loadChat(index),
+              );
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+@override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
+    
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      drawer: _buildDrawer(theme),  // Add this line
+      body: Stack(
+        children: [
+          // Background Design
+          Positioned(
+            top: -size.height * 0.1,
+            right: -size.width * 0.2,
+            child: Container(
+              height: size.height * 0.3,
+              width: size.height * 0.3,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    theme.colorScheme.primary.withOpacity(0.2),
+                    theme.colorScheme.primary.withOpacity(0),
+                  ],
+                ),
               ),
             ),
+          ),
+          Positioned(
+            bottom: -size.height * 0.1,
+            left: -size.width * 0.2,
+            child: Container(
+              height: size.height * 0.3,
+              width: size.height * 0.3,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    theme.colorScheme.secondary.withOpacity(0.2),
+                    theme.colorScheme.secondary.withOpacity(0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Main Content
+          Column(
+            children: [
+              _buildGlassAppBar(theme),
+              Expanded(
+                child: _buildMessageList(theme),
+              ),
+              if (_isLoading)
+                _buildLoadingIndicator(theme),
+              _buildGlassInputBar(theme),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMessageList(ThemeData theme) {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16.0),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final message = _messages[index];
-        return MessageBubble(
-          message: message['content'] ?? '',
-          sender: message['sender'] ?? '',
-          theme: theme,
-        );
-      },
-    );
-  }
-
-  Widget _buildMessageInput(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        border: Border(
-          top: BorderSide(
-            color: theme.dividerColor,
-            width: 0.5,
+  Widget _buildGlassAppBar(ThemeData theme) {
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 8,
+            bottom: 8,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.1),
+            border: Border(
+              bottom: BorderSide(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.menu, color: theme.colorScheme.onSurface),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+              Expanded(
+                child: Text(
+                  'Campus Assistant',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.account_circle, 
+                  color: theme.colorScheme.onSurface),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProfilePage()),
+                ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLoadingIndicator(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'Type your message...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: theme.dividerColor,
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.colorScheme.primary,
+                    ),
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                const SizedBox(width: 8),
+                Text(
+                  'Thinking...',
+                  style: GoogleFonts.poppins(
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
-              ),
-              onSubmitted: (_) => _sendMessage(),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: _sendMessage,
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGlassInputBar(ThemeData theme) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              8 + MediaQuery.of(context).padding.bottom,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface.withOpacity(0.8),
+              border: Border(
+                top: BorderSide(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Ask me anything...',
+                        hintStyle: GoogleFonts.poppins(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      style: GoogleFonts.poppins(),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send_rounded),
+                    color: theme.colorScheme.onPrimary,
+                    onPressed: _sendMessage,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
+// In the same file, update the MessageBubble class
 class MessageBubble extends StatelessWidget {
   final String message;
   final String sender;
@@ -272,8 +458,8 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.sender,
     required this.theme,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -284,25 +470,12 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         mainAxisAlignment: alignRight ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,  // Align to top
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!alignRight)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: isSystem 
-                    ? theme.colorScheme.error.withOpacity(0.1)
-                    : theme.colorScheme.primary.withOpacity(0.1),
-                child: Icon(
-                  isSystem ? Icons.info : Icons.smart_toy,
-                  color: isSystem 
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.primary,
-                  size: 20,
-                ),
-              ),
-            ),
+          if (!alignRight) ...[
+            _buildAvatar(isSystem, theme),
+            const SizedBox(width: 8),
+          ],
           Flexible(
             child: Container(
               constraints: BoxConstraints(
@@ -314,45 +487,69 @@ class MessageBubble extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 color: alignRight
-                    ? theme.colorScheme.primary.withOpacity(0.1)
+                    ? theme.colorScheme.primary
                     : isSystem
                         ? theme.colorScheme.error.withOpacity(0.1)
-                        : theme.cardColor,
+                        : theme.colorScheme.surface,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(alignRight ? 12 : 4),
-                  topRight: Radius.circular(alignRight ? 4 : 12),
-                  bottomLeft: const Radius.circular(12),
-                  bottomRight: const Radius.circular(12),
+                  topLeft: Radius.circular(alignRight ? 20 : 4),
+                  topRight: Radius.circular(alignRight ? 4 : 20),
+                  bottomLeft: const Radius.circular(20),
+                  bottomRight: const Radius.circular(20),
                 ),
-                border: Border.all(
-                  color: theme.dividerColor.withOpacity(0.5),
-                  width: 0.5,
-                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.shadowColor.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Text(
                 message,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isSystem
-                      ? theme.colorScheme.error
-                      : theme.textTheme.bodyMedium?.color,
+                style: GoogleFonts.poppins(
+                  color: alignRight
+                      ? theme.colorScheme.onPrimary
+                      : isSystem
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.onSurface,
                 ),
               ),
             ),
           ),
-          if (alignRight)
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                child: Icon(
-                  Icons.person,
-                  color: theme.colorScheme.primary,
-                  size: 20,
-                ),
-              ),
-            ),
+          if (alignRight) ...[
+            const SizedBox(width: 8),
+            _buildAvatar(isSystem, theme),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(bool isSystem, ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: CircleAvatar(
+        radius: 16,
+        backgroundColor: isSystem
+            ? theme.colorScheme.error.withOpacity(0.1)
+            : theme.colorScheme.primary.withOpacity(0.1),
+        child: Icon(
+          isSystem ? Icons.info : Icons.smart_toy,
+          color: isSystem
+              ? theme.colorScheme.error
+              : theme.colorScheme.primary,
+          size: 20,
+        ),
       ),
     );
   }

@@ -1,4 +1,3 @@
-
 import 'package:campuslink/data/save_user_data.dart';
 import 'package:campuslink/data/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,144 +17,157 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _institutionController = TextEditingController();
   bool _obscurePassword = true;
   String? _errorMessage;
   bool _isLoading = false;
+  String? _selectedInstitution; // For guest login institution selection
+
+  // List of institutions for the dropdown
+  final List<String> institutions = [
+    'ebenezer',
+    'CCSIT PERAMANGALAM',
+    'ccsit',
+    // Add more institutions as needed
+  ];
 
   bool get _isAdminLogin => widget.userType.toLowerCase() == 'admin';
   bool get _isGuestLogin => widget.userType.toLowerCase() == 'guest';
 
-// Function to update FCM token in the database
-Future<void> updateFcmToken(String userId) async {
-  String? fcmToken = await FirebaseMessaging.instance.getToken();
-  if (fcmToken == null) {
-    print("FCM Token is null, skipping update.");
-    return;
-  }
-
-  try {
-    var response = await http.post(
-      Uri.parse("${Config.baseUrl}/clink/api/update_fcm_token.php"),
-      body: {
-        "username": userId, // Use username to update the FCM token
-        "fcm_token": fcmToken,
-      },
-    );
-
-    var responseData = json.decode(response.body);
-    if (responseData["success"]) {
-      print("FCM Token updated successfully!");
-    } else {
-      print("Failed to update FCM Token: ${responseData["message"]}");
-    }
-  } catch (e) {
-    print("Error updating FCM Token: $e");
-  }
-}
-
- Future<void> _validateAndLogin() async {
-  setState(() {
-    _errorMessage = null;
-    _isLoading = true;
-  });
-
-  try {
-    final username = _usernameController.text.trim();
-    final institution = _institutionController.text.trim();
-
-    if (username.isEmpty) {
-      throw 'Please enter a username';
+  // Function to update FCM token in the database
+  Future<void> updateFcmToken(String userId) async {
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken == null) {
+      print("FCM Token is null, skipping update.");
+      return;
     }
 
-    if (!_isGuestLogin && institution.isEmpty) {
-      throw 'Please enter your institution';
-    }
-
-    if (!_isGuestLogin && _passwordController.text.isEmpty) {
-      throw 'Please enter a password';
-    }
-
-    Map<String, dynamic> requestBody = {
-      'username': username,
-      'userType': widget.userType.toLowerCase(),
-    };
-
-    if (!_isGuestLogin) {
-      requestBody['password'] = _passwordController.text;
-      requestBody['institution'] = institution;
-    }
-
-    final response = await http.post(
-      Uri.parse('${Config.baseUrl}/clink/api/login.php'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(requestBody),
-    );
-
-    // Log the raw response body
-    print('Response body: ${response.body}');
-
-    if (response.body.isEmpty) {
-      throw 'Server returned empty response';
-    }
-
-    final data = jsonDecode(response.body);
-
-    if (data['status'] == 'success') {
-      final user = data['user'];
-      final userId = user['user_id']?.toString() ?? '';
-      final email = user['email']?.toString() ?? '';
-      final password = _passwordController.text;
-      final userType = widget.userType;
-      final institution = user['institution']?.toString() ?? '';
-
-      // Saving user data using saveUserData
-      await saveUserData(userId, email, password, userType, institution);
-
-      // Saving basic login state using SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-      await prefs.setString('userId', userId);
-      await prefs.setString('userType', userType);
-      await prefs.setString('institution', institution);
-
-      // Update FCM token after successful login
-      await updateFcmToken(userId);
-
-      // Navigate to the main screen
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/main',
-        (route) => false,
-        arguments: {
-          'userType': userType,
-          'userId': userId,
-          'institution': institution,
+    try {
+      var response = await http.post(
+        Uri.parse("${Config.baseUrl}/clink/api/update_fcm_token.php"),
+        body: {
+          "username": userId, // Use username to update the FCM token
+          "fcm_token": fcmToken,
         },
       );
-    } else {
-      throw data['message'] ?? 'Login failed';
-    }
-  } catch (e) {
-    setState(() {
-      if (e is FormatException) {
-        _errorMessage = 'Invalid server response';
-      } else {
-        _errorMessage = e.toString();
-      }
-    });
-    print('Login error: $e');
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
-  }
-}
 
+      var responseData = json.decode(response.body);
+      if (responseData["success"]) {
+        print("FCM Token updated successfully!");
+      } else {
+        print("Failed to update FCM Token: ${responseData["message"]}");
+      }
+    } catch (e) {
+      print("Error updating FCM Token: $e");
+    }
+  }
+
+  Future<void> _validateAndLogin() async {
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+    });
+
+    try {
+      final username = _usernameController.text.trim();
+      final institution = _isGuestLogin ? _selectedInstitution : _passwordController.text.trim();
+
+      if (username.isEmpty) {
+        throw 'Please enter a username';
+      }
+
+      if (_isGuestLogin && institution == null) {
+        throw 'Please select an institution';
+      }
+
+      if (!_isGuestLogin && institution!.isEmpty) {
+        throw 'Please enter your institution';
+      }
+
+      if (!_isGuestLogin && _passwordController.text.isEmpty) {
+        throw 'Please enter a password';
+      }
+
+      Map<String, dynamic> requestBody = {
+        'username': username,
+        'userType': widget.userType.toLowerCase(),
+      };
+
+      if (!_isGuestLogin) {
+        requestBody['password'] = _passwordController.text;
+        requestBody['institution'] = institution;
+      } else {
+        requestBody['institution'] = institutions[0]; // Add institution for guest login
+      }
+
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}/clink/api/login.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      // Log the raw response body
+      print('Response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        throw 'Server returned empty response';
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data['status'] == 'success') {
+        final user = data['user'];
+        final userId = user['user_id']?.toString() ?? '';
+        final email = user['email']?.toString() ?? '';
+        final password = _passwordController.text;
+        final userType = widget.userType;
+        final institution = user['institution']?.toString() ?? '';
+
+        // Saving user data using saveUserData
+        await saveUserData(userId, email, password, userType, institution);
+
+        // Saving basic login state using SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('userId', userId);
+        await prefs.setString('userType', userType);
+        await prefs.setString('institution', institution);
+
+        // Update FCM token after successful login
+        await updateFcmToken(userId);
+
+        // Navigate to the main screen
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/main',
+          (route) => false,
+          arguments: {
+            'userType': userType,
+            'userId': userId,
+            'institution': institution,
+          },
+        );
+      } else {
+        throw data['message'] ?? 'Login failed';
+      }
+    } catch (e) {
+      setState(() {
+        if (e is FormatException) {
+          _errorMessage = 'Invalid server response';
+        } else {
+          _errorMessage = e.toString();
+        }
+      });
+      print('Login error: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -186,13 +198,11 @@ Future<void> updateFcmToken(String userId) async {
                   label: 'Username',
                   icon: Icons.person_rounded,
                 ),
-                if (!_isGuestLogin) ...[
+                if (_isGuestLogin) ...[
                   const SizedBox(height: 24),
-                  _buildTextField(
-                    controller: _institutionController,
-                    label: 'Institution',
-                    icon: Icons.school_rounded,
-                  ),
+                  _buildInstitutionDropdown(), // Institution dropdown for guest login
+                ],
+                if (!_isGuestLogin) ...[
                   const SizedBox(height: 24),
                   _buildTextField(
                     controller: _passwordController,
@@ -270,6 +280,24 @@ Future<void> updateFcmToken(String userId) async {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInstitutionDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedInstitution,
+      hint: Text('Select Institution'),
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedInstitution = newValue;
+        });
+      },
+      items: institutions.map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
     );
   }
 
