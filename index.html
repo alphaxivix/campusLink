@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusLink - Smart Campus Solution</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        :root {
+            --primary: #0D1F0D;
+            --secondary: #1A472A;
+            --accent: #2ECC71;
+            --light: #ECFDF5;
+            --gray: #2C3E50;
+        }
+
+        body {
+            background-color: var(--primary);     
+
+            color: var(--light);
+            line-height: 1.6;
+        }
+
+        .navbar {
+            position: fixed;
+            width: 100%;
+            padding: 1.2rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(13, 31, 13, 0.95);
+            box-shadow: 0 2px 20px rgba(46, 204, 113, 0.1);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.3);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+        }
+
+        .nav-links a {
+            color: var(--light);
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 0 10%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url('/api/placeholder/1920/1080') center/cover;
+            opacity: 0.1;
+        }
+
+        .hero-content {
+            width: 60%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+            background: linear-gradient(to right, var(--light), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2.5rem;
+            color: var(--light);
+            opacity: 0.9;
+        }
+
+        .download-buttons {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .download-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 1rem 2rem;
+            background: rgba(46, 204, 113, 0.1);
+            border: 2px solid var(--accent);
+            color: var(--light);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 500;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .download-btn:hover::before {
+            left: 0;
+        }
+
+        .download-btn:hover {
+            color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+
+        .features {
+            padding: 10rem 10%;
+            background-color: var(--secondary);
+            clip-path: polygon(0 5%, 100% 0, 100% 95%, 0 100%);
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 3rem;
+            color: var(--accent);
+            margin-bottom: 5rem;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: var(--accent);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .feature {
+            padding: 2.5rem;
+            background: rgba(13, 31, 13, 0.5);
+            border-radius: 20px;
+            transition: all 0.3s;
+            border: 1px solid rgba(46, 204, 113, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .feature:hover::before {
+            opacity: 1;
+        }
+
+        .feature:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature i {
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .feature h3 {
+            color: var(--light);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .audience {
+            padding: 10rem 10%;
+            background-color: var(--primary);
+        }
+
+        .audience-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+            margin-top: 4rem;
+        }
+
+        .audience-item {
+            padding: 2.5rem;
+            background: rgba(26, 71, 42, 0.3);
+            border-radius: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 1px solid rgba(46, 204, 113, 0.1);
+        }
+
+        .audience-item:hover {
+            transform: translateY(-5px);
+            background: rgba(26, 71, 42, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .audience-item i {
+            font-size: 3rem;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .audience-item h3 {
+            color: var(--light);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .cta {
+            padding: 10rem 10%;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('/api/placeholder/1920/1080') center/cover;
+            opacity: 0.05;
+        }
+
+        .cta h2 {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+        }
+
+        .cta p {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            color: var(--light);
+        }
+
+        @media (max-width: 768px) {
+            .hero-content {
+                width: 100%;
+                text-align: center;
+            }
+
+            .download-buttons {
+                justify-content: center;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 3rem;
+            }
+        }
+
+        /* Animated background effect */
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(46, 204, 113, 0.05) 10px,
+                rgba(46, 204, 113, 0.05) 20px
+            );
+            animation: backgroundMove 20s linear infinite;
+        }
+
+        @keyframes backgroundMove {
+            from {
+                background-position: 0 0;
+            }
+            to {
+                background-position: 100% 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">CampusLink</div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#audience">For Who</a>
+            <a href="#download">Download</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Future of Campus Life</h1>
+            <p>Experience seamless campus management with our cutting-edge IoT and AI-powered solution.</p>
+            <div class="download-buttons">
+                <a href="#" class="download-btn">
+                    <i class="fab fa-google-play"></i>
+                    Get it on Play Store
+                </a>
+                <a href="#" class="download-btn">
+                    <i class="fas fa-qrcode"></i>
+                    Download via QR
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <h2 class="section-title">Revolutionary Features</h2>
+        <div class="features-grid">
+            <div class="feature">
+                <i class="fas fa-fingerprint"></i>
+                <h3>Smart Attendance</h3>
+                <p>Advanced IoT-powered biometric system for seamless attendance tracking with real-time monitoring.</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-users"></i>
+                <h3>Community Space</h3>
+                <p>Engage with your campus community through an intuitive social platform designed for academia.</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-comments"></i>
+                <h3>Smart Chatrooms</h3>
+                <p>Department-specific communication channels with advanced collaboration tools.</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-robot"></i>
+                <h3>AI Assistant</h3>
+                <p>24/7 intelligent campus companion providing instant support and guidance.</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>Event Hub</h3>
+                <p>Comprehensive event management system with smart notifications and RSVP tracking.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="audience" id="audience">
+        <h2 class="section-title">Who Benefits</h2>
+        <div class="audience-grid">
+            <div class="audience-item">
+                <i class="fas fa-user-tie"></i>
+                <h3>Administrators</h3>
+                <p>Access powerful analytics and streamline campus operations</p>
+            </div>
+            <div class="audience-item">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <h3>Faculty</h3>
+                <p>Enhance teaching efficiency with smart tools</p>
+            </div>
+            <div class="audience-item">
+                <i class="fas fa-user-graduate"></i>
+                <h3>Students</h3>
+                <p>Connect, learn, and grow with innovative features</p>
+            </div>
+            <div class="audience-item">
+                <i class="fas fa-user-plus"></i>
+                <h3>Aspirants</h3>
+                <p>Discover campus life and admission opportunities</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta" id="download">
+        <h2>Join the Smart Campus Revolution</h2>
+        <p>Download CampusLink now and be part of the future</p>
+        <div class="download-buttons" style="justify-content: center; margin-top: 2rem;">
+            <a href="#" class="download-btn">
+                <i class="fab fa-google-play"></i>
+                Get it on Play Store
+            </a>
+            <a href="#" class="download-btn">
+                <i class="fas fa-qrcode"></i>
+                Download via QR
+            </a>
+        </div>
+    </section>
+</body>
+</html>
